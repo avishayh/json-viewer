@@ -2,10 +2,18 @@ import { ref } from 'vue'
 
 type JsonValue = string | number | boolean | null | Record<string, any> | any[]
 
+export interface TransformedValue {
+  path: string
+  type: string
+  originalValue: string
+}
+
 export function useJsonProcessor() {
   const parsedJson = ref<JsonValue | null>(null)
   const error = ref('')
   const lastParsedJson = ref('')
+  const originalValues = new WeakMap<object, string>()
+  const transformedValues = ref<TransformedValue[]>([])
 
   const isBase64 = (str: string): boolean => {
     try {
@@ -33,12 +41,21 @@ export function useJsonProcessor() {
     }
   }
 
-  const processValue = (value: JsonValue): JsonValue => {
+  const processValue = (value: JsonValue, path: string): JsonValue => {
     if (typeof value !== 'string') return value
     
     const parsedJson = tryParseJson(value)
     if (parsedJson) {
-      return processObject(parsedJson)
+      const processed = processObject(parsedJson, path)
+      if (processed && typeof processed === 'object') {
+        originalValues.set(processed, value)
+        transformedValues.value.push({
+          path,
+          type: 'JSON',
+          originalValue: value
+        })
+      }
+      return processed
     }
     
     if (isBase64(value)) {
@@ -48,9 +65,18 @@ export function useJsonProcessor() {
         if (isReadableText(decoded)) {
           const parsed = tryParseJson(decoded)
           if (parsed) {
-            return processObject(parsed)
+            const processed = processObject(parsed, path)
+            if (processed && typeof processed === 'object') {
+              originalValues.set(processed, value)
+              transformedValues.value.push({
+                path,
+                type: 'Base64',
+                originalValue: value
+              })
+            }
+            return processed
           }
-          return processValue(decoded)
+          return decoded
         }
         return value // Return original base64 if decoded string is not readable
       } catch (err) {
@@ -61,18 +87,34 @@ export function useJsonProcessor() {
     return value
   }
 
-  const processObject = (obj: JsonValue): JsonValue => {
+  const processObject = (obj: JsonValue, parentPath: string = ''): JsonValue => {
     if (Array.isArray(obj)) {
-      return obj.map(item => processObject(item))
+      return obj.map((item, index) => {
+        const currentPath = `${parentPath}[${index}]`
+        if (typeof item === 'string') {
+          const processed = processValue(item, currentPath)
+          if (processed && typeof processed === 'object') {
+            originalValues.set(processed, item)
+          }
+          return processed
+        } else {
+          return processObject(item, currentPath)
+        }
+      })
     }
     
     if (obj && typeof obj === 'object') {
       const result: Record<string, any> = {}
       for (const [key, value] of Object.entries(obj)) {
+        const currentPath = parentPath ? `${parentPath}.${key}` : key
         if (typeof value === 'string') {
-          result[key] = processValue(value)
+          const processed = processValue(value, currentPath)
+          result[key] = processed
+          if (processed && typeof processed === 'object') {
+            originalValues.set(processed, value)
+          }
         } else {
-          result[key] = processObject(value)
+          result[key] = processObject(value, currentPath)
         }
       }
       return result
@@ -81,9 +123,14 @@ export function useJsonProcessor() {
     return obj
   }
 
+  const getOriginalValue = (obj: object): string | undefined => {
+    return originalValues.get(obj)
+  }
+
   const parseJson = (jsonInput: string): boolean => {
     try {
       error.value = ''
+      transformedValues.value = []
       const jsonData = JSON.parse(jsonInput)
       parsedJson.value = processObject(jsonData)
       lastParsedJson.value = jsonInput
@@ -99,6 +146,8 @@ export function useJsonProcessor() {
     parsedJson,
     error,
     lastParsedJson,
-    parseJson
+    parseJson,
+    getOriginalValue,
+    transformedValues
   }
 } 

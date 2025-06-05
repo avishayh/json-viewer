@@ -37,17 +37,22 @@
       <div v-if="error" class="error">
         {{ error }}
       </div>
-      <div v-if="parsedJson" class="json-viewer">
-        <vue-json-pretty
-          :data="parsedJson"
-          :deep="999"
-          :show-double-quotes="true"
-          :show-length="true"
-          :collapsed-strings-length="50"
-          :collapsed-on-click-brackets="true"
-          :show-collapsed-on-click-brackets="true"
-          :show-line="true"
-          :show-icon="true"
+      <div v-if="parsedJson" class="content-wrapper">
+        <div class="json-viewer">
+          <vue-json-pretty
+            :data="parsedJson"
+            :deep="999"
+            :show-double-quotes="true"
+            :show-length="true"
+            :collapsed-strings-length="50"
+            :collapsed-on-click-brackets="true"
+            :show-collapsed-on-click-brackets="true"
+            :show-line="true"
+            :show-icon="true"
+          />
+        </div>
+        <TransformedValuesPanel
+          :transformed-values="transformedValues"
         />
       </div>
     </div>
@@ -60,6 +65,7 @@ import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import versionInfo from '../version.json'
 import HistorySidebar from './components/HistorySidebar.vue'
+import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
 import { useHistory } from './composables/useHistory'
 import { useJsonProcessor } from './composables/useJsonProcessor'
 import type { HistoryItem } from './composables/useHistory'
@@ -68,7 +74,8 @@ export default defineComponent({
   name: 'App',
   components: {
     VueJsonPretty,
-    HistorySidebar
+    HistorySidebar,
+    TransformedValuesPanel
   },
   setup() {
     const {
@@ -83,7 +90,8 @@ export default defineComponent({
       parsedJson,
       error,
       lastParsedJson,
-      parseJson
+      parseJson,
+      transformedValues
     } = useJsonProcessor()
 
     return {
@@ -95,7 +103,8 @@ export default defineComponent({
       parsedJson,
       error,
       lastParsedJson,
-      parseJson
+      parseJson,
+      transformedValues
     }
   },
   data() {
@@ -266,13 +275,22 @@ button:disabled {
   font-size: 0.875rem;
 }
 
+.content-wrapper {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+}
+
 .json-viewer {
+  flex: 1;
   background-color: var(--surface-color);
   padding: 1.5rem;
   border-radius: 8px;
   overflow: auto;
   border: 1px solid var(--border-color);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  min-width: 0;
 }
 
 /* Custom scrollbar */
