@@ -42,7 +42,7 @@
       <div v-if="parsedJson" class="json-viewer">
         <vue-json-pretty
           :data="parsedJson"
-          :deep="2"
+          :deep="999"
           :show-double-quotes="true"
           :show-length="true"
           :collapsed-strings-length="50"
