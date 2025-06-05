@@ -15,6 +15,16 @@ export function useJsonProcessor() {
     }
   }
 
+  const isReadableText = (str: string): boolean => {
+    // Check if the string contains mostly printable ASCII characters
+    const printableChars = str.split('').filter(char => {
+      const code = char.charCodeAt(0)
+      return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13
+    }).length
+    const ratio = printableChars / str.length
+    return ratio > 0.8 // If more than 80% of characters are printable, consider it readable
+  }
+
   const tryParseJson = (str: string): JsonValue | null => {
     try {
       return JSON.parse(str)
@@ -34,11 +44,15 @@ export function useJsonProcessor() {
     if (isBase64(value)) {
       try {
         const decoded = atob(value)
-        const parsed = tryParseJson(decoded)
-        if (parsed) {
-          return processObject(parsed)
+        // Only process if the decoded string is readable text or valid JSON
+        if (isReadableText(decoded)) {
+          const parsed = tryParseJson(decoded)
+          if (parsed) {
+            return processObject(parsed)
+          }
+          return processValue(decoded)
         }
-        return processValue(decoded)
+        return value // Return original base64 if decoded string is not readable
       } catch (err) {
         return value
       }
