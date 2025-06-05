@@ -1,30 +1,51 @@
 <template>
-  <div class="container">
-    <h1>JSON Viewer</h1>
-    <div class="version-info">
-      Version: {{ version }} | Last updated: {{ lastUpdated }}
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>History</h2>
+        <button class="clear-button" @click="clearHistory" :disabled="!history.length">
+          Clear History
+        </button>
+      </div>
+      <div class="history-list">
+        <div
+          v-for="(item, index) in history"
+          :key="index"
+          class="history-item"
+          @click="loadFromHistory(item)"
+        >
+          <div class="history-preview">{{ getPreview(item) }}</div>
+          <div class="history-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
+        </div>
+      </div>
     </div>
-    <div class="input-section">
-      <textarea
-        v-model="jsonInput"
-        placeholder="Paste your JSON here..."
-        rows="6"
-      ></textarea>
-      <button @click="parseJson" :disabled="!jsonInput.trim()">
-        Parse JSON
-      </button>
-    </div>
-    <div v-if="error" class="error">
-      {{ error }}
-    </div>
-    <div v-if="parsedJson" class="json-viewer">
-      <vue-json-pretty
-        :data="parsedJson"
-        :deep="2"
-        :show-double-quotes="true"
-        :show-length="true"
-        :collapsed-strings-length="50"
-      />
+    <div class="main-content">
+      <h1>JSON Viewer</h1>
+      <div class="version-info">
+        Version: {{ version }} | Last updated: {{ lastUpdated }}
+      </div>
+      <div class="input-section">
+        <textarea
+          v-model="jsonInput"
+          placeholder="Paste your JSON here..."
+          rows="6"
+        ></textarea>
+        <button @click="parseJson" :disabled="!jsonInput.trim()">
+          Parse JSON
+        </button>
+      </div>
+      <div v-if="error" class="error">
+        {{ error }}
+      </div>
+      <div v-if="parsedJson" class="json-viewer">
+        <vue-json-pretty
+          :data="parsedJson"
+          :deep="2"
+          :show-double-quotes="true"
+          :show-length="true"
+          :collapsed-strings-length="50"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -39,6 +60,11 @@ type JsonValue = string | number | boolean | null | JsonObject | JsonArray
 interface JsonObject { [key: string]: JsonValue }
 type JsonArray = JsonValue[]
 
+interface HistoryItem {
+  json: string
+  timestamp: number
+}
+
 export default defineComponent({
   name: 'App',
   components: {
@@ -50,7 +76,9 @@ export default defineComponent({
       parsedJson: null as JsonValue | null,
       error: '',
       version: versionInfo.version,
-      lastUpdated: new Date(versionInfo.lastUpdated).toLocaleString()
+      lastUpdated: new Date(versionInfo.lastUpdated).toLocaleString(),
+      history: [] as HistoryItem[],
+      lastParsedJson: ''
     }
   },
   methods: {
@@ -59,10 +87,47 @@ export default defineComponent({
         this.error = ''
         const jsonData = JSON.parse(this.jsonInput)
         this.parsedJson = this.processObject(jsonData)
+        
+        if (this.jsonInput !== this.lastParsedJson) {
+          this.addToHistory(this.jsonInput)
+          this.lastParsedJson = this.jsonInput
+        }
       } catch (err) {
         this.error = 'Invalid JSON format'
         this.parsedJson = null
       }
+    },
+    addToHistory(json: string): void {
+      const newItem: HistoryItem = {
+        json,
+        timestamp: Date.now()
+      }
+      
+      this.history.unshift(newItem)
+      
+      if (this.history.length > 20) {
+        this.history = this.history.slice(0, 20)
+      }
+    },
+    loadFromHistory(item: HistoryItem): void {
+      this.jsonInput = item.json
+      this.lastParsedJson = item.json
+      this.parseJson()
+    },
+    clearHistory(): void {
+      this.history = []
+    },
+    getPreview(item: HistoryItem): string {
+      try {
+        const parsed = JSON.parse(item.json)
+        const stringified = JSON.stringify(parsed)
+        return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified
+      } catch {
+        return item.json.length > 50 ? item.json.substring(0, 47) + '...' : item.json
+      }
+    },
+    formatTimestamp(timestamp: number): string {
+      return new Date(timestamp).toLocaleTimeString()
     },
     isBase64(str: string): boolean {
       try {
@@ -81,22 +146,18 @@ export default defineComponent({
     processValue(value: JsonValue): JsonValue {
       if (typeof value !== 'string') return value
       
-      // Try to parse as JSON first
       const parsedJson = this.tryParseJson(value)
       if (parsedJson) {
         return this.processObject(parsedJson)
       }
       
-      // Then try base64
       if (this.isBase64(value)) {
         try {
           const decoded = atob(value)
-          // Try to parse the decoded value as JSON first
           const parsed = this.tryParseJson(decoded)
           if (parsed) {
             return this.processObject(parsed)
           }
-          // If not JSON, recursively process the decoded string
           return this.processValue(decoded)
         } catch (err) {
           return value
@@ -129,10 +190,109 @@ export default defineComponent({
 </script>
 
 <style>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.sidebar {
+  width: 320px;
+  background-color: white;
+  padding: 1.5rem;
+  border-right: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-header {
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-header h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.clear-button {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.clear-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.clear-button:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.history-item {
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  background-color: white;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.history-item:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.history-preview {
+  font-family: monospace;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  word-break: break-all;
+  color: #2c3e50;
+  line-height: 1.4;
+}
+
+.history-timestamp {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.main-content {
+  flex: 1;
   padding: 2rem;
+  overflow-y: auto;
+  background-color: white;
 }
 
 h1 {
