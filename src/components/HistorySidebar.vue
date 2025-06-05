@@ -1,106 +1,129 @@
 <template>
-  <div class="sidebar">
-    <div class="sidebar-header">
+  <div class="history-sidebar">
+    <div class="history-header">
       <h2>History</h2>
-      <button class="clear-button" @click="clearHistory" :disabled="!history.length">
-        Clear History
+      <button class="clear-button" @click="$emit('clear')" :disabled="!history.length" title="Clear History">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"></path>
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+        </svg>
       </button>
     </div>
     <div class="history-list">
+      <div v-if="!history.length" class="empty-state">
+        No history items
+      </div>
       <div
         v-for="(item, index) in history"
         :key="index"
         class="history-item"
+        @click="$emit('load', item)"
       >
-        <div class="history-content" @click="$emit('load', item)">
-          <div class="history-preview">{{ getPreview(item) }}</div>
-          <div class="history-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
+        <div class="history-item-header">
+          <h3 class="history-item-title">JSON {{ index + 1 }}</h3>
+          <span class="history-item-timestamp">{{ formatTimestamp(item.timestamp) }}</span>
         </div>
-        <button class="remove-button" @click.stop="$emit('remove', index)">×</button>
+        <div class="history-item-preview">{{ getPreview(item.json) }}</div>
+        <button class="remove-button" @click.stop="$emit('remove', index)" title="Remove from history">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, PropType } from 'vue'
 import type { HistoryItem } from '../composables/useHistory'
 
 export default defineComponent({
   name: 'HistorySidebar',
   props: {
     history: {
-      type: Array as () => HistoryItem[],
+      type: Array as PropType<HistoryItem[]>,
       required: true
     }
   },
   emits: ['load', 'remove', 'clear'],
-  methods: {
-    getPreview(item: HistoryItem): string {
+  setup() {
+    const formatTimestamp = (timestamp: number): string => {
+      return new Date(timestamp).toLocaleString();
+    };
+
+    const getPreview = (json: string): string => {
       try {
-        const parsed = JSON.parse(item.json)
-        const stringified = JSON.stringify(parsed)
-        return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified
+        const parsed = JSON.parse(json);
+        const stringified = JSON.stringify(parsed);
+        return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified;
       } catch {
-        return item.json.length > 50 ? item.json.substring(0, 47) + '...' : item.json
+        return json.length > 50 ? json.substring(0, 47) + '...' : json;
       }
-    },
-    formatTimestamp(timestamp: number): string {
-      return new Date(timestamp).toLocaleTimeString()
-    },
-    clearHistory(): void {
-      this.$emit('clear')
-    }
+    };
+
+    return {
+      formatTimestamp,
+      getPreview
+    };
   }
 })
 </script>
 
 <style scoped>
-.sidebar {
-  width: 320px;
-  background-color: white;
-  padding: 1.5rem;
-  border-right: 1px solid #e9ecef;
+.history-sidebar {
+  width: 300px;
+  min-width: 300px;
+  background-color: var(--surface-color);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  height: 100vh;
 }
 
-.sidebar-header {
-  margin-bottom: 1.5rem;
+.history-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.sidebar-header h2 {
-  margin: 0 0 1rem 0;
-  font-size: 1.2rem;
-  color: #2c3e50;
+.history-header h2 {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  padding-left: 1rem;
 }
 
 .clear-button {
-  width: 100%;
-  padding: 0.5rem;
-  background-color: #dc3545;
-  color: white;
+  background: none;
   border: none;
-  border-radius: 4px;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+  padding: 0.5rem;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.clear-button:hover:not(:disabled) {
-  background-color: #c82333;
+.clear-button:hover {
+  color: var(--error-color);
 }
 
-.clear-button:disabled {
-  background-color: #e9ecef;
-  cursor: not-allowed;
+.clear-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 .history-list {
   flex: 1;
   overflow-y: auto;
-  padding-right: 0.5rem;
+  padding: 1rem;
 }
 
 .history-list::-webkit-scrollbar {
@@ -108,63 +131,107 @@ export default defineComponent({
 }
 
 .history-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--background-color);
   border-radius: 3px;
 }
 
 .history-list::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--border-color);
   border-radius: 3px;
 }
 
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
 .history-item {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 1rem;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
-  background-color: white;
-  transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.history-item:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.history-item-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-}
-
-.history-content {
-  flex: 1;
-  cursor: pointer;
-}
-
-.history-content:hover {
-  background-color: #f8f9fa;
-}
-
-.history-preview {
-  font-family: monospace;
-  font-size: 0.9rem;
+  align-items: center;
   margin-bottom: 0.5rem;
-  word-break: break-all;
-  color: #2c3e50;
-  line-height: 1.4;
+  padding-right: 1.5rem;
 }
 
-.history-timestamp {
-  font-size: 0.8rem;
-  color: #6c757d;
+.history-item-title {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item-timestamp {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.history-item-preview {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .remove-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
   background: none;
   border: none;
-  color: #dc3545;
-  font-size: 1.2rem;
-  padding: 0 0.5rem;
+  color: var(--text-secondary);
   cursor: pointer;
-  margin: 0;
-  line-height: 1;
+  padding: 0.25rem;
+  transition: all 0.2s;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-item:hover .remove-button {
+  opacity: 1;
 }
 
 .remove-button:hover {
-  color: #c82333;
+  color: var(--error-color);
+  transform: scale(1.1);
+}
+
+.remove-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.empty-state {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 2rem;
+  font-size: 0.875rem;
 }
 </style> 
