@@ -124,31 +124,30 @@ export default defineComponent({
 
 .value-item {
   padding: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .value-item:hover {
-  background-color: #f5f5f5;
+  background-color: var(--background-color);
 }
 
 .value-path {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.875rem;
   color: var(--text-primary);
+  font-size: 0.875rem;
+  margin-bottom: 4px;
   word-break: break-all;
-  margin-bottom: 0.25rem;
 }
 
 .value-type {
   display: inline-block;
-  padding: 0.25rem 0.5rem;
-  background-color: var(--background-color);
+  padding: 2px 6px;
+  background-color: var(--primary-color);
+  color: white;
   border-radius: 4px;
   font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 4px;
 }
 
 .value-preview {

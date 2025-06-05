@@ -9,17 +9,35 @@
     <div class="main-content">
       <div class="header">
         <h1>JSON Viewer</h1>
-        <div class="about-icon" @click="showAbout = !showAbout">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          <div v-if="showAbout" class="about-popup">
-            <div class="about-content">
-              <h3>About</h3>
-              <p>Version: {{ version }}</p>
-              <p>Last updated: {{ lastUpdated }}</p>
+        <div class="header-actions">
+          <button class="theme-toggle" @click="toggleTheme" :title="isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'">
+            <svg v-if="isDarkTheme()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+          <div class="about-icon" @click="showAbout = !showAbout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <div v-if="showAbout" class="about-popup">
+              <div class="about-content">
+                <h3>About</h3>
+                <p>Version: {{ version }}</p>
+                <p>Last updated: {{ lastUpdated }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -29,8 +47,9 @@
           v-model="jsonInput"
           placeholder="Paste your JSON here..."
           rows="6"
+          @input="handleInput"
         ></textarea>
-        <button @click="handleParse" :disabled="!jsonInput.trim()">
+        <button @click="handleInput" :disabled="!jsonInput.trim()">
           Parse JSON
         </button>
       </div>
@@ -38,21 +57,14 @@
         {{ error }}
       </div>
       <div v-if="parsedJson" class="content-wrapper">
-        <div class="json-viewer">
-          <vue-json-pretty
-            :data="parsedJson"
-            :deep="999"
-            :show-double-quotes="true"
-            :show-length="true"
-            :collapsed-strings-length="50"
-            :collapsed-on-click-brackets="true"
-            :show-collapsed-on-click-brackets="true"
-            :show-line="true"
-            :show-icon="true"
-          />
-        </div>
+        <CustomJsonViewer
+          :data="parsedJson"
+          :highlight-path="highlightedPath"
+          :get-original-value="getOriginalValue"
+        />
         <TransformedValuesPanel
           :transformed-values="transformedValues"
+          @select-path="handlePathSelect"
         />
       </div>
     </div>
@@ -60,22 +72,25 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, ref } from 'vue'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import versionInfo from '../version.json'
 import HistorySidebar from './components/HistorySidebar.vue'
 import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
+import CustomJsonViewer from './components/CustomJsonViewer.vue'
 import { useHistory } from './composables/useHistory'
 import { useJsonProcessor } from './composables/useJsonProcessor'
 import type { HistoryItem } from './composables/useHistory'
+import { useTheme } from './composables/useTheme'
 
 export default defineComponent({
   name: 'App',
   components: {
     VueJsonPretty,
     HistorySidebar,
-    TransformedValuesPanel
+    TransformedValuesPanel,
+    CustomJsonViewer
   },
   setup() {
     const {
@@ -91,8 +106,17 @@ export default defineComponent({
       error,
       lastParsedJson,
       parseJson,
-      transformedValues
+      transformedValues,
+      getOriginalValue
     } = useJsonProcessor()
+
+    const { currentTheme, toggleTheme, isDarkTheme } = useTheme()
+
+    const highlightedPath = ref<string | undefined>(undefined)
+
+    const handlePathSelect = (path: string) => {
+      highlightedPath.value = path
+    }
 
     return {
       history,
@@ -104,7 +128,13 @@ export default defineComponent({
       error,
       lastParsedJson,
       parseJson,
-      transformedValues
+      transformedValues,
+      highlightedPath,
+      handlePathSelect,
+      getOriginalValue,
+      currentTheme,
+      toggleTheme,
+      isDarkTheme
     }
   },
   data() {
@@ -119,7 +149,7 @@ export default defineComponent({
     this.loadHistory()
   },
   methods: {
-    handleParse(): void {
+    handleInput(): void {
       if (this.parseJson(this.jsonInput)) {
         this.addToHistory(this.jsonInput)
       }
@@ -143,6 +173,18 @@ export default defineComponent({
   --border-color: #e2e8f0;
   --error-color: #ef4444;
   --error-bg: #fef2f2;
+}
+
+[data-theme="darcula"] {
+  --primary-color: #61afef;
+  --primary-hover: #528bcc;
+  --background-color: #282a36;
+  --surface-color: #1e1f29;
+  --text-primary: #f8f8f2;
+  --text-secondary: #a5a5a5;
+  --border-color: #44475a;
+  --error-color: #ff5555;
+  --error-bg: #2d1e1e;
 }
 
 * {
@@ -177,6 +219,33 @@ body {
   align-items: center;
   margin-bottom: 2.5rem;
   position: relative;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  color: var(--primary-color);
+}
+
+.theme-toggle svg {
+  width: 24px;
+  height: 24px;
 }
 
 .about-icon {
@@ -231,6 +300,7 @@ textarea {
   resize: vertical;
   transition: border-color 0.2s, box-shadow 0.2s;
   background-color: var(--surface-color);
+  color: var(--text-primary);
 }
 
 textarea:focus {
