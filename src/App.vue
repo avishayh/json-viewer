@@ -280,6 +280,7 @@ button:disabled {
   gap: 1rem;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .json-viewer {
@@ -287,10 +288,11 @@ button:disabled {
   background-color: var(--surface-color);
   padding: 1.5rem;
   border-radius: 8px;
-  overflow: auto;
+  overflow-y: auto;
   border: 1px solid var(--border-color);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   min-width: 0;
+  height: calc(100vh - 300px);
 }
 
 /* Custom scrollbar */
