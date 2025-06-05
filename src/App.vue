@@ -89,7 +89,7 @@ const showAbout = ref(false)
 const version = versionInfo.version
 const lastUpdated = new Date(versionInfo.lastUpdated).toLocaleString()
 
-const { currentTheme, toggleTheme, isDarkTheme } = useTheme()
+const { toggleTheme, isDarkTheme } = useTheme()
 const { history, loadHistory, addToHistory, removeFromHistory, clearHistory } = useHistory()
 
 const {
