@@ -11,6 +11,12 @@ A modern web-based JSON viewer built with Vite and TypeScript that provides an i
 - Version tracking through `version.json`
 - Built with TypeScript for type safety
 - Fast development server with hot module replacement
+- History panel with persistent storage
+  - Stores up to 20 recent JSON entries
+  - Individual item deletion
+  - Automatic loading of previous entries
+  - Clear all history option
+  - Persists across page reloads
 
 ## Use Cases
 
@@ -19,6 +25,7 @@ This viewer is particularly useful for:
 - Working with In-toto attestations and metadata
 - Decoding base64-encoded payloads automatically
 - Inspecting signed metadata and attestations
+- Maintaining a history of recently viewed JSON documents
 
 ## Getting Started
 
@@ -53,6 +60,8 @@ This project uses:
 - Vite for fast development and building
 - TypeScript for type safety
 - Modern web technologies for optimal performance
+- Local Storage for persistent data
+- Vue.js for reactive UI components
 
 ## Version Control
 
