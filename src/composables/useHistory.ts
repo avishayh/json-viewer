@@ -24,6 +24,12 @@ export function useHistory() {
   }
 
   const addToHistory = (json: string): void => {
+    // Check if the same JSON already exists in history
+    const isDuplicate = history.value.some(item => item.json === json)
+    if (isDuplicate) {
+      return
+    }
+
     const newItem: HistoryItem = {
       json,
       timestamp: Date.now()

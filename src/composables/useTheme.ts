@@ -1,14 +1,14 @@
 import { ref, watch } from 'vue'
 
 const THEME_KEY = 'json-viewer-theme'
-const DARCULA_THEME = 'darcula'
+const DARK_THEME = 'dark'
 const LIGHT_THEME = 'light'
 
 const currentTheme = ref(localStorage.getItem(THEME_KEY) || LIGHT_THEME)
 
 export function useTheme() {
   const toggleTheme = () => {
-    currentTheme.value = currentTheme.value === LIGHT_THEME ? DARCULA_THEME : LIGHT_THEME
+    currentTheme.value = currentTheme.value === LIGHT_THEME ? DARK_THEME : LIGHT_THEME
   }
 
   watch(currentTheme, (newTheme) => {
@@ -19,6 +19,6 @@ export function useTheme() {
   return {
     currentTheme,
     toggleTheme,
-    isDarkTheme: () => currentTheme.value === DARCULA_THEME
+    isDarkTheme: () => currentTheme.value === DARK_THEME
   }
 } 

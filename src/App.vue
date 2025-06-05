@@ -2,7 +2,7 @@
   <div class="app-container">
     <HistorySidebar
       :history="history"
-      @load="loadFromHistory"
+      @load="handleHistorySelect"
       @remove="removeFromHistory"
       @clear="clearHistory"
     />
@@ -10,7 +10,7 @@
       <div class="header">
         <h1>JSON Viewer</h1>
         <div class="header-actions">
-          <button class="theme-toggle" @click="toggleTheme" :title="isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'">
+          <button class="theme-toggle" @click="toggleTheme" :title="getThemeTitle()">
             <svg v-if="isDarkTheme()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="5"></circle>
               <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -42,20 +42,22 @@
           </div>
         </div>
       </div>
+      
       <div class="input-section">
         <textarea
           v-model="jsonInput"
           placeholder="Paste your JSON here..."
           rows="6"
-          @input="handleInput"
         ></textarea>
-        <button @click="handleInput" :disabled="!jsonInput.trim()">
+        <button @click="handleParseJson" :disabled="!jsonInput.trim()">
           Parse JSON
         </button>
       </div>
+      
       <div v-if="error" class="error">
         {{ error }}
       </div>
+      
       <div v-if="parsedJson" class="content-wrapper">
         <CustomJsonViewer
           :data="parsedJson"
@@ -71,95 +73,55 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue'
-import VueJsonPretty from 'vue-json-pretty'
-import 'vue-json-pretty/lib/styles.css'
-import versionInfo from '../version.json'
-import HistorySidebar from './components/HistorySidebar.vue'
-import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
-import CustomJsonViewer from './components/CustomJsonViewer.vue'
-import { useHistory } from './composables/useHistory'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
-import type { HistoryItem } from './composables/useHistory'
+import { useHistory } from './composables/useHistory'
 import { useTheme } from './composables/useTheme'
+import CustomJsonViewer from './components/CustomJsonViewer.vue'
+import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
+import HistorySidebar from './components/HistorySidebar.vue'
+import versionInfo from '../version.json'
 
-export default defineComponent({
-  name: 'App',
-  components: {
-    VueJsonPretty,
-    HistorySidebar,
-    TransformedValuesPanel,
-    CustomJsonViewer
-  },
-  setup() {
-    const {
-      history,
-      loadHistory,
-      addToHistory,
-      removeFromHistory,
-      clearHistory
-    } = useHistory()
+const jsonInput = ref('')
+const highlightedPath = ref<string | undefined>(undefined)
+const showAbout = ref(false)
+const version = versionInfo.version
+const lastUpdated = new Date(versionInfo.lastUpdated).toLocaleString()
 
-    const {
-      parsedJson,
-      error,
-      lastParsedJson,
-      parseJson,
-      transformedValues,
-      getOriginalValue
-    } = useJsonProcessor()
+const { currentTheme, toggleTheme, isDarkTheme } = useTheme()
+const { history, loadHistory, addToHistory, removeFromHistory, clearHistory } = useHistory()
 
-    const { currentTheme, toggleTheme, isDarkTheme } = useTheme()
+const {
+  parsedJson,
+  error,
+  parseJson,
+  transformedValues,
+  getOriginalValue
+} = useJsonProcessor()
 
-    const highlightedPath = ref<string | undefined>(undefined)
-
-    const handlePathSelect = (path: string) => {
-      highlightedPath.value = path
-    }
-
-    return {
-      history,
-      loadHistory,
-      addToHistory,
-      removeFromHistory,
-      clearHistory,
-      parsedJson,
-      error,
-      lastParsedJson,
-      parseJson,
-      transformedValues,
-      highlightedPath,
-      handlePathSelect,
-      getOriginalValue,
-      currentTheme,
-      toggleTheme,
-      isDarkTheme
-    }
-  },
-  data() {
-    return {
-      jsonInput: '',
-      version: versionInfo.version,
-      lastUpdated: new Date(versionInfo.lastUpdated).toLocaleString(),
-      showAbout: false
-    }
-  },
-  created() {
-    this.loadHistory()
-  },
-  methods: {
-    handleInput(): void {
-      if (this.parseJson(this.jsonInput)) {
-        this.addToHistory(this.jsonInput)
-      }
-    },
-    loadFromHistory(item: HistoryItem): void {
-      this.jsonInput = item.json
-      this.parseJson(item.json)
-    }
-  }
+onMounted(() => {
+  loadHistory()
 })
+
+const handleParseJson = () => {
+  if (parseJson(jsonInput.value)) {
+    addToHistory(jsonInput.value)
+  }
+}
+
+const handleHistorySelect = (item: { json: string }) => {
+  jsonInput.value = item.json
+  parseJson(item.json)
+}
+
+const handlePathSelect = (path: string) => {
+  highlightedPath.value = path
+}
+
+const getThemeTitle = () => {
+  return isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'
+}
 </script>
 
 <style>
@@ -175,7 +137,7 @@ export default defineComponent({
   --error-bg: #fef2f2;
 }
 
-[data-theme="darcula"] {
+[data-theme="dark"] {
   --primary-color: #61afef;
   --primary-hover: #528bcc;
   --background-color: #282a36;
@@ -248,41 +210,6 @@ body {
   height: 24px;
 }
 
-.about-icon {
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-  position: relative;
-}
-
-.about-icon:hover {
-  color: var(--primary-color);
-}
-
-.about-popup {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
-  min-width: 200px;
-  z-index: 1000;
-}
-
-.about-content h3 {
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
-}
-
-.about-content p {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
-}
-
 .input-section {
   margin-bottom: 2.5rem;
   max-width: 800px;
@@ -353,16 +280,10 @@ button:disabled {
   overflow: hidden;
 }
 
-.json-viewer {
-  flex: 1;
-  background-color: var(--surface-color);
-  padding: 1.5rem;
-  border-radius: 8px;
-  overflow-y: auto;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  min-width: 0;
-  height: calc(100vh - 300px);
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-color);
 }
 
 /* Custom scrollbar */
@@ -382,5 +303,40 @@ button:disabled {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
+}
+
+.about-icon {
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+  position: relative;
+}
+
+.about-icon:hover {
+  color: var(--primary-color);
+}
+
+.about-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  min-width: 200px;
+  z-index: 1000;
+}
+
+.about-content h3 {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.about-content p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
 }
 </style> 
