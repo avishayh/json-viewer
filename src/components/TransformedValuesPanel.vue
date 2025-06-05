@@ -9,15 +9,15 @@
         @mouseover="showTooltip($event, value.originalValue)"
         @mouseleave="hideTooltip"
       >
-        <div class="value-path">{{ value.path }}</div>
+        <div class="value-path" :title="value.path">{{ value.path }}</div>
         <div class="value-type">{{ value.type }}</div>
-        <div class="value-preview">{{ getPreview(value.originalValue) }}</div>
+        <div class="value-preview" :title="value.originalValue">
+          {{ getPreview(value.originalValue) }}
+        </div>
       </div>
     </div>
     <div v-if="tooltipVisible" class="tooltip" :style="tooltipStyle">
-      <div class="tooltip-content">
-        <pre>{{ tooltipContent }}</pre>
-      </div>
+      <pre>{{ tooltipContent }}</pre>
     </div>
   </div>
 </template>
@@ -25,93 +25,112 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 import type { TransformedValue } from '../composables/useJsonProcessor'
+import { PropType } from 'vue'
 
 export default defineComponent({
   name: 'TransformedValuesPanel',
   props: {
     transformedValues: {
-      type: Array as () => TransformedValue[],
+      type: Array as PropType<Array<{
+        path: string;
+        type: string;
+        originalValue: string;
+      }>>,
       required: true
     }
   },
   setup() {
-    const tooltipVisible = ref(false)
-    const tooltipContent = ref('')
+    const tooltipVisible = ref(false);
+    const tooltipContent = ref('');
     const tooltipStyle = ref({
       top: '0px',
       left: '0px'
-    })
+    });
 
     const getPreview = (value: string): string => {
-      try {
-        const parsed = JSON.parse(value)
-        const stringified = JSON.stringify(parsed)
-        return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified
-      } catch {
-        return value.length > 50 ? value.substring(0, 47) + '...' : value
+      if (value.length > 50) {
+        return value.substring(0, 50) + '...';
       }
-    }
+      return value;
+    };
 
     const showTooltip = (event: MouseEvent, content: string) => {
-      tooltipContent.value = content
+      tooltipContent.value = content;
+      tooltipVisible.value = true;
       tooltipStyle.value = {
         top: `${event.clientY + 10}px`,
         left: `${event.clientX + 10}px`
-      }
-      tooltipVisible.value = true
-    }
+      };
+    };
 
     const hideTooltip = () => {
-      tooltipVisible.value = false
-    }
+      tooltipVisible.value = false;
+    };
 
     return {
-      tooltipVisible,
-      tooltipContent,
-      tooltipStyle,
       getPreview,
       showTooltip,
-      hideTooltip
-    }
+      hideTooltip,
+      tooltipVisible,
+      tooltipContent,
+      tooltipStyle
+    };
   }
-})
+});
 </script>
 
 <style scoped>
 .transformed-values-panel {
   width: 350px;
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  min-width: 350px;
+  border-left: 1px solid var(--border-color);
   padding: 1rem;
+  background-color: var(--surface-color);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  height: calc(100vh - 300px);
 }
 
-h3 {
-  margin: 0 0 1rem 0;
+.transformed-values-panel h3 {
+  margin-bottom: 1rem;
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .values-list {
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.values-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.values-list::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: 3px;
+}
+
+.values-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.values-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 .value-item {
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .value-item:hover {
-  background-color: var(--background-color);
+  background-color: #f5f5f5;
 }
 
 .value-path {
@@ -133,34 +152,31 @@ h3 {
 }
 
 .value-preview {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.75rem;
   color: var(--text-secondary);
-  white-space: pre-wrap;
+  font-size: 0.875rem;
+  margin-top: 4px;
   word-break: break-all;
 }
 
 .tooltip {
   position: fixed;
-  z-index: 1000;
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
+  font-size: 0.875rem;
   max-width: 400px;
   max-height: 300px;
-  overflow: auto;
-  pointer-events: none;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.tooltip-content {
-  padding: 0.75rem;
-}
-
-.tooltip-content pre {
+.tooltip pre {
   margin: 0;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-wrap: break-word;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.75rem;
   color: var(--text-primary);
   background: var(--background-color);
