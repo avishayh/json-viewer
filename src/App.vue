@@ -12,10 +12,12 @@
           v-for="(item, index) in history"
           :key="index"
           class="history-item"
-          @click="loadFromHistory(item)"
         >
-          <div class="history-preview">{{ getPreview(item) }}</div>
-          <div class="history-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
+          <div class="history-content" @click="loadFromHistory(item)">
+            <div class="history-preview">{{ getPreview(item) }}</div>
+            <div class="history-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
+          </div>
+          <button class="remove-button" @click.stop="removeFromHistory(index)">×</button>
         </div>
       </div>
     </div>
@@ -44,6 +46,10 @@
           :show-double-quotes="true"
           :show-length="true"
           :collapsed-strings-length="50"
+          :collapsed-on-click-brackets="true"
+          :show-collapsed-on-click-brackets="true"
+          :show-line="true"
+          :show-icon="true"
         />
       </div>
     </div>
@@ -81,6 +87,9 @@ export default defineComponent({
       lastParsedJson: ''
     }
   },
+  created() {
+    this.loadHistory()
+  },
   methods: {
     parseJson(): void {
       try {
@@ -97,6 +106,19 @@ export default defineComponent({
         this.parsedJson = null
       }
     },
+    loadHistory(): void {
+      const savedHistory = localStorage.getItem('jsonViewerHistory')
+      if (savedHistory) {
+        try {
+          this.history = JSON.parse(savedHistory)
+        } catch {
+          this.history = []
+        }
+      }
+    },
+    saveHistory(): void {
+      localStorage.setItem('jsonViewerHistory', JSON.stringify(this.history))
+    },
     addToHistory(json: string): void {
       const newItem: HistoryItem = {
         json,
@@ -108,6 +130,8 @@ export default defineComponent({
       if (this.history.length > 20) {
         this.history = this.history.slice(0, 20)
       }
+      
+      this.saveHistory()
     },
     loadFromHistory(item: HistoryItem): void {
       this.jsonInput = item.json
@@ -116,6 +140,7 @@ export default defineComponent({
     },
     clearHistory(): void {
       this.history = []
+      this.saveHistory()
     },
     getPreview(item: HistoryItem): string {
       try {
@@ -184,6 +209,10 @@ export default defineComponent({
       }
       
       return obj
+    },
+    removeFromHistory(index: number): void {
+      this.history.splice(index, 1)
+      this.saveHistory()
     }
   }
 })
@@ -262,10 +291,12 @@ export default defineComponent({
   border: 1px solid #e9ecef;
   border-radius: 6px;
   margin-bottom: 0.75rem;
-  cursor: pointer;
   background-color: white;
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .history-item:hover {
@@ -350,5 +381,29 @@ button:disabled {
   padding: 1rem;
   border-radius: 4px;
   overflow: auto;
+}
+
+.history-content {
+  flex: 1;
+  cursor: pointer;
+}
+
+.history-content:hover {
+  background-color: #f8f9fa;
+}
+
+.remove-button {
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 1.2rem;
+  padding: 0 0.5rem;
+  cursor: pointer;
+  margin: 0;
+  line-height: 1;
+}
+
+.remove-button:hover {
+  color: #c82333;
 }
 </style> 
