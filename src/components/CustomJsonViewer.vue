@@ -13,7 +13,6 @@
         :show-icon="true"
         :path-selectable="true"
         @rendered="handleRendered"
-        @node-click="handleNodeClick"
       />
     </div>
     <div v-if="tooltipVisible" class="tooltip" :style="tooltipStyle">
@@ -135,6 +134,7 @@ export default defineComponent({
       if (newPath && jsonContainer.value) {
         // Wait for the next tick to ensure the DOM is updated
         nextTick(() => {
+          if (!jsonContainer.value) return;
           const element = jsonContainer.value.querySelector(`[data-path="${newPath}"]`);
           if (element) {
             // Add highlight class
@@ -151,10 +151,6 @@ export default defineComponent({
         });
       }
     });
-
-    const handleNodeClick = (node: any) => {
-      // Implement the logic to handle node click
-    }
 
     onMounted(() => {
       if (jsonContainer.value) {
@@ -176,8 +172,7 @@ export default defineComponent({
       tooltipContent,
       tooltipStyle,
       handleRendered,
-      jsonViewerRef,
-      handleNodeClick
+      jsonViewerRef
     }
   }
 })
@@ -211,7 +206,7 @@ export default defineComponent({
 }
 
 :deep(.vjs-value.vjs-value-string) {
-  color: #a6e22e;
+  color: #e22eb8;
 }
 
 :deep(.vjs-value.vjs-value-number) {

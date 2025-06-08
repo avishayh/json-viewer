@@ -24,7 +24,6 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import type { TransformedValue } from '../composables/useJsonProcessor'
 import { PropType } from 'vue'
 
 export default defineComponent({
