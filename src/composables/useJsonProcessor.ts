@@ -37,7 +37,7 @@ export function useJsonProcessor() {
     try {
       return JSON.parse(str)
     } catch (err) {
-      console.debug(`[JSON] Not a json in path: ${str}`)
+      // console.debug(`[JSON] Not a json in path: ${str}`)
       return null
     }
   }
@@ -45,9 +45,11 @@ export function useJsonProcessor() {
   const processValue = (value: JsonValue, path: string): JsonValue => {
     if (typeof value !== 'string') return value
     
+    console.log(`${path} : [Process] Processing value: ${value.substring(0, 50)}...`)
+    
     const parsedJson = tryParseJson(value)
     if (parsedJson) {
-      console.log(`[JSON] Processing path: ${path}`)
+      console.log(`${path} : [JSON] Processing`)
       const processed = processObject(parsedJson, path)
       if (processed && typeof processed === 'object') {
         originalValues.set(processed, value)
@@ -63,11 +65,12 @@ export function useJsonProcessor() {
     if (isBase64(value)) {
       try {
         const decoded = atob(value)
+        console.log(`${path} : [Base64] Decoded: ${decoded.substring(0, 50)}...`)
         // Only process if the decoded string is readable text or valid JSON
         if (isReadableText(decoded)) {
           const parsed = tryParseJson(decoded)
           if (parsed) {
-            console.log(`[Base64->JSON] Processing path: ${path}`)
+            console.log(`${path} : [Base64->JSON] Processing`)
             const processed = processObject(parsed, path)
             if (processed && typeof processed === 'object') {
               originalValues.set(processed, value)
@@ -76,17 +79,25 @@ export function useJsonProcessor() {
                 type: 'Base64',
                 originalValue: value
               })
+              console.log(`${path} : [Base64->JSON] Added to transforms`)
             }
-            console.log(`[Base64->JSON] Processed path: ${path}`)
+            console.log(`${path} : [Base64->JSON] Processed`)
             return processed
           }
-          console.log(`[Base64->JSON] Not a json in path: ${path}`)
+          console.log(`${path} : [Base64->JSON] Not a json`)
+          // Add to transforms when returning decoded base64
+          transformedValues.value.push({
+            path,
+            type: 'Base64',
+            originalValue: value
+          })
+          console.log(`${path} : [Base64] Added to transforms`)
           return decoded
         }
-        console.log(`[Base64] Not readable at path: ${path}`)
+        console.log(`${path} : [Base64] Not readable`)
         return value // Return original base64 if decoded string is not readable
       } catch (err) {
-        console.log(`[Base64] Error at path: ${path}`)
+        console.log(`${path} : [Base64] Error`)
         return value
       }
     }
@@ -96,7 +107,7 @@ export function useJsonProcessor() {
 
   const processObject = (obj: JsonValue, parentPath: string = ''): JsonValue => {
     if (Array.isArray(obj)) {
-      console.log(`[Array] Processing path: ${parentPath}`)
+      console.log(`${parentPath} : [Array] Processing`)
       return obj.map((item, index) => {
         const currentPath = `${parentPath}[${index}]`
         if (typeof item === 'string') {
