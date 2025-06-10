@@ -44,6 +44,9 @@
       </div>
       
       <div class="input-section">
+        <div class="input-section .example-buttons">
+          <ExampleButtons @load-example="handleExampleLoad" />
+        </div>
         <textarea
           v-model="jsonInput"
           placeholder="Paste your JSON here..."
@@ -81,6 +84,7 @@ import { useTheme } from './composables/useTheme'
 import CustomJsonViewer from './components/CustomJsonViewer.vue'
 import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
 import HistorySidebar from './components/HistorySidebar.vue'
+import ExampleButtons from './components/ExampleButtons.vue'
 import versionInfo from '../version.json'
 
 const jsonInput = ref('')
@@ -117,6 +121,11 @@ const handleHistorySelect = (item: { json: string }) => {
 
 const handlePathSelect = (path: string) => {
   highlightedPath.value = path
+}
+
+const handleExampleLoad = (json: string) => {
+  jsonInput.value = json
+  parseJson(json)
 }
 
 const getThemeTitle = () => {
@@ -213,6 +222,10 @@ body {
 .input-section {
   margin-bottom: 2.5rem;
   max-width: 800px;
+}
+
+.input-section .example-buttons {
+  margin-bottom: 0.75rem;
 }
 
 textarea {

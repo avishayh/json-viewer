@@ -37,6 +37,7 @@ export function useJsonProcessor() {
     try {
       return JSON.parse(str)
     } catch (err) {
+      console.debug(`[JSON] Not a json in path: ${str}`)
       return null
     }
   }
@@ -46,6 +47,7 @@ export function useJsonProcessor() {
     
     const parsedJson = tryParseJson(value)
     if (parsedJson) {
+      console.log(`[JSON] Processing path: ${path}`)
       const processed = processObject(parsedJson, path)
       if (processed && typeof processed === 'object') {
         originalValues.set(processed, value)
@@ -65,6 +67,7 @@ export function useJsonProcessor() {
         if (isReadableText(decoded)) {
           const parsed = tryParseJson(decoded)
           if (parsed) {
+            console.log(`[Base64->JSON] Processing path: ${path}`)
             const processed = processObject(parsed, path)
             if (processed && typeof processed === 'object') {
               originalValues.set(processed, value)
@@ -74,12 +77,16 @@ export function useJsonProcessor() {
                 originalValue: value
               })
             }
+            console.log(`[Base64->JSON] Processed path: ${path}`)
             return processed
           }
+          console.log(`[Base64->JSON] Not a json in path: ${path}`)
           return decoded
         }
+        console.log(`[Base64] Not readable at path: ${path}`)
         return value // Return original base64 if decoded string is not readable
       } catch (err) {
+        console.log(`[Base64] Error at path: ${path}`)
         return value
       }
     }
@@ -89,6 +96,7 @@ export function useJsonProcessor() {
 
   const processObject = (obj: JsonValue, parentPath: string = ''): JsonValue => {
     if (Array.isArray(obj)) {
+      console.log(`[Array] Processing path: ${parentPath}`)
       return obj.map((item, index) => {
         const currentPath = `${parentPath}[${index}]`
         if (typeof item === 'string') {

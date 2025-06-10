@@ -1,0 +1,11 @@
+{
+    "payload": "eyJ0eXBlIjoiYXBwbGljYXRpb24vdm5kLmNudGYuY29udGFpbmVyLmltYWdlLnYxK2pzb24iLCJjb25maWciOiJ7XCJjcmVhdGVkXCI6XCIyMDI0LTAzLTIwVDIwOjQwOjQwWlwiLFwiYXV0aG9yXCI6XCJFeGFtcGxlIEF1dGhvclwifSJ9",
+    "payloadType": "application/vnd.cntf.container.image.v1+json",
+    "signatures": [
+      {
+        "keyid": "key1",
+        "sig": "base64signature1",
+        "cert": "base64certificate1"
+      }
+    ]
+} 
