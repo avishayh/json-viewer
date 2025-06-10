@@ -17,6 +17,7 @@
 import { ref } from 'vue'
 import dsseExample from '../examples/dsse.json'
 import sigstoreExample from '../examples/sigstore.json'
+import intotoExample from '../examples/intoto.json'
 
 interface Example {
   name: string
@@ -25,7 +26,8 @@ interface Example {
 
 const examples = ref<Example[]>([
   { name: 'dsse', data: dsseExample },
-  { name: 'sigstore', data: sigstoreExample }
+  { name: 'sigstore', data: sigstoreExample },
+  { name: 'intoto', data: intotoExample }
 ])
 
 const emit = defineEmits<{

@@ -28,6 +28,7 @@ import { usePatternRecognizer, type PatternType } from '../../composables/usePat
 import RawJsonView from './RawJsonView.vue'
 import DsseView from './DsseView.vue'
 import SigstoreView from './SigstoreView.vue'
+import InTotoView from './InTotoView.vue'
 
 const props = defineProps<{
   json: any
@@ -61,6 +62,10 @@ const availableTabs = computed(() => {
     tabs.push({ id: 'sigstore', label: 'Sigstore View' })
   }
 
+  if (patternInfo.value.type === 'INTOTO') {
+    tabs.push({ id: 'intoto', label: 'In-toto View' })
+  }
+
   return tabs
 })
 
@@ -72,6 +77,8 @@ const currentTabComponent = computed(() => {
       return DsseView
     case 'sigstore':
       return SigstoreView
+    case 'intoto':
+      return InTotoView
     default:
       return RawJsonView
   }

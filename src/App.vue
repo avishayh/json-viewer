@@ -157,6 +157,17 @@ const getThemeTitle = () => {
 const getThemeToggleText = computed(() => {
   return isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'
 })
+
+const loadExample = async (type: string) => {
+  try {
+    const response = await fetch(`/examples/${type}/example1.json`)
+    const json = await response.json()
+    jsonInput.value = json
+    parseJson(json)
+  } catch (error) {
+    console.error('Error loading example:', error)
+  }
+}
 </script>
 
 <style>
@@ -383,5 +394,44 @@ h1 {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
+}
+
+.examples {
+  margin-top: 2.5rem;
+  padding: 1rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.example-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.example-buttons button {
+  padding: 0.75rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.example-buttons button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.example-buttons button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.example-buttons button:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  color: var(--text-secondary);
 }
 </style> 
