@@ -21,10 +21,10 @@
         @click="$emit('load', item)"
       >
         <div class="history-item-header">
-          <h3 class="history-item-title">JSON {{ index + 1 }}</h3>
+          <h3 class="history-item-title">{{ getHistoryTitle(item, index) }}</h3>
           <span class="history-item-timestamp">{{ formatTimestamp(item.timestamp) }}</span>
         </div>
-        <div class="history-item-preview">{{ getPreview(item.json) }}</div>
+        <div class="history-item-preview">{{ getPreview(item) }}</div>
         <button class="remove-button" @click.stop="$emit('remove', index)" title="Remove from history">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -46,29 +46,21 @@ export default defineComponent({
     history: {
       type: Array as PropType<HistoryItem[]>,
       required: true
+    },
+    getHistoryTitle: {
+      type: Function as PropType<(item: HistoryItem, index: number) => string>,
+      required: true
+    },
+    formatTimestamp: {
+      type: Function as PropType<(timestamp: number) => string>,
+      required: true
+    },
+    getPreview: {
+      type: Function as PropType<(item: HistoryItem) => string>,
+      required: true
     }
   },
-  emits: ['load', 'remove', 'clear'],
-  setup() {
-    const formatTimestamp = (timestamp: number): string => {
-      return new Date(timestamp).toLocaleString();
-    };
-
-    const getPreview = (json: string): string => {
-      try {
-        const parsed = JSON.parse(json);
-        const stringified = JSON.stringify(parsed);
-        return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified;
-      } catch {
-        return json.length > 50 ? json.substring(0, 47) + '...' : json;
-      }
-    };
-
-    return {
-      formatTimestamp,
-      getPreview
-    };
-  }
+  emits: ['load', 'remove', 'clear']
 })
 </script>
 

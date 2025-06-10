@@ -2,6 +2,9 @@
   <div class="app-container">
     <HistorySidebar
       :history="history"
+      :get-history-title="getHistoryTitle"
+      :format-timestamp="formatTimestamp"
+      :get-preview="getPreview"
       @load="handleHistorySelect"
       @remove="removeFromHistory"
       @clear="clearHistory"
@@ -62,11 +65,20 @@
       </div>
       
       <div v-if="parsedJson" class="content-wrapper">
-        <CustomJsonViewer
-          :data="parsedJson"
-          :highlight-path="highlightedPath"
-          :get-original-value="getOriginalValue"
-        />
+        <div class="json-section">
+          <PatternTabs 
+            v-if="hasPattern" 
+            :json="parsedJson"
+            :highlight-path="highlightedPath"
+            :get-original-value="getOriginalValue"
+          />
+          <CustomJsonViewer
+            v-else
+            :data="parsedJson"
+            :highlight-path="highlightedPath"
+            :get-original-value="getOriginalValue"
+          />
+        </div>
         <TransformedValuesPanel
           :transformed-values="transformedValues"
           @select-path="handlePathSelect"
@@ -77,12 +89,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
-import { useHistory } from './composables/useHistory'
+import { useHistory, type HistoryItem } from './composables/useHistory'
 import { useTheme } from './composables/useTheme'
+import { usePatternRecognizer } from './composables/usePatternRecognizer'
 import CustomJsonViewer from './components/CustomJsonViewer.vue'
 import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
+import PatternTabs from './components/PatternTabs/PatternTabs.vue'
 import HistorySidebar from './components/HistorySidebar.vue'
 import ExampleButtons from './components/ExampleButtons.vue'
 import versionInfo from '../version.json'
@@ -94,7 +108,7 @@ const version = versionInfo.version
 const lastUpdated = new Date(versionInfo.lastUpdated).toLocaleString()
 
 const { toggleTheme, isDarkTheme } = useTheme()
-const { history, loadHistory, addToHistory, removeFromHistory, clearHistory } = useHistory()
+const { history, loadHistory, addToHistory, removeFromHistory, clearHistory, getPreview, formatTimestamp, getHistoryTitle } = useHistory()
 
 const {
   parsedJson,
@@ -103,6 +117,14 @@ const {
   transformedValues,
   getOriginalValue
 } = useJsonProcessor()
+
+const { currentPattern, recognizePattern } = usePatternRecognizer()
+
+const hasPattern = computed(() => {
+  if (!parsedJson.value) return false
+  const pattern = recognizePattern(parsedJson.value)
+  return pattern.type !== 'UNKNOWN'
+})
 
 onMounted(() => {
   loadHistory()
@@ -131,6 +153,10 @@ const handleExampleLoad = (json: string) => {
 const getThemeTitle = () => {
   return isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'
 }
+
+const getThemeToggleText = computed(() => {
+  return isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'
+})
 </script>
 
 <style>
@@ -288,9 +314,15 @@ button:disabled {
 .content-wrapper {
   display: flex;
   gap: 1rem;
+  height: calc(100vh - 300px);
+}
+
+.json-section {
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 h1 {

@@ -1,12 +1,15 @@
 import { ref } from 'vue'
+import { usePatternRecognizer } from './usePatternRecognizer'
 
 export interface HistoryItem {
   json: string
   timestamp: number
+  patternType?: string
 }
 
 export function useHistory() {
   const history = ref<HistoryItem[]>([])
+  const { recognizePattern } = usePatternRecognizer()
 
   const loadHistory = (): void => {
     const savedHistory = localStorage.getItem('jsonViewerHistory')
@@ -30,9 +33,22 @@ export function useHistory() {
       return
     }
 
+    // Try to recognize the pattern
+    let patternType: string | undefined
+    try {
+      const parsed = JSON.parse(json)
+      const pattern = recognizePattern(parsed)
+      if (pattern.type !== 'UNKNOWN') {
+        patternType = pattern.type
+      }
+    } catch {
+      // If JSON parsing fails, don't set a pattern type
+    }
+
     const newItem: HistoryItem = {
       json,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      patternType
     }
     
     history.value.unshift(newItem)
@@ -68,6 +84,13 @@ export function useHistory() {
     return new Date(timestamp).toLocaleTimeString()
   }
 
+  const getHistoryTitle = (item: HistoryItem, index: number): string => {
+    if (item.patternType) {
+      return `${item.patternType} ${index + 1}`
+    }
+    return `JSON ${index + 1}`
+  }
+
   return {
     history,
     loadHistory,
@@ -75,6 +98,7 @@ export function useHistory() {
     removeFromHistory,
     clearHistory,
     getPreview,
-    formatTimestamp
+    formatTimestamp,
+    getHistoryTitle
   }
 } 
