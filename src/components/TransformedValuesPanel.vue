@@ -3,17 +3,26 @@
     <h3>Transformed Values</h3>
     <div class="values-list">
       <div
-        v-for="(value, index) in transformedValues"
+        v-for="(item, index) in transformedValues"
         :key="index"
         class="value-item"
-        @mouseover="showTooltip($event, value.originalValue)"
-        @mouseleave="hideTooltip"
+        @click="$emit('select-path', item.path)"
       >
-        <div class="value-path" :title="value.path">{{ value.path }}</div>
-        <div class="value-type">{{ value.type }}</div>
-        <div class="value-preview" :title="value.originalValue">
-          {{ getPreview(value.originalValue) }}
+        <div class="value-header">
+          <div class="value-path">{{ item.path }}</div>
+          <button 
+            class="copy-button" 
+            @click.stop="copyToClipboard(item.originalValue)"
+            :title="'Copy original value'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
         </div>
+        <span class="value-type">{{ item.type }}</span>
+        <div class="value-preview">{{ getPreview(item.originalValue) }}</div>
       </div>
     </div>
     <div v-if="tooltipVisible" class="tooltip" :style="tooltipStyle">
@@ -47,10 +56,7 @@ export default defineComponent({
     });
 
     const getPreview = (value: string): string => {
-      if (value.length > 50) {
-        return value.substring(0, 50) + '...';
-      }
-      return value;
+      return value.length > 50 ? value.substring(0, 47) + '...' : value
     };
 
     const showTooltip = (event: MouseEvent, content: string) => {
@@ -66,13 +72,22 @@ export default defineComponent({
       tooltipVisible.value = false;
     };
 
+    const copyToClipboard = async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text)
+      } catch (err) {
+        console.error('Failed to copy text: ', err)
+      }
+    }
+
     return {
       getPreview,
       showTooltip,
       hideTooltip,
       tooltipVisible,
       tooltipContent,
-      tooltipStyle
+      tooltipStyle,
+      copyToClipboard
     };
   }
 });
@@ -132,11 +147,37 @@ export default defineComponent({
   background-color: var(--background-color);
 }
 
+.value-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .value-path {
   color: var(--text-primary);
   font-size: 0.875rem;
   margin-bottom: 4px;
   word-break: break-all;
+  flex: 1;
+}
+
+.copy-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.copy-button:hover {
+  color: var(--primary-color);
+  background-color: var(--background-color);
 }
 
 .value-type {
@@ -154,6 +195,12 @@ export default defineComponent({
   font-size: 0.875rem;
   margin-top: 4px;
   word-break: break-all;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .tooltip {
