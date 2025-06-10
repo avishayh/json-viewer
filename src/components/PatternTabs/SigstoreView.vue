@@ -69,36 +69,72 @@ const formattedContent = computed(() => {
     // If it's a DSSE envelope, try to decode the payload
     if (props.json.content?.dsseEnvelope?.payload) {
       try {
-        const decoded = decodeURIComponent(escape(atob(props.json.content.dsseEnvelope.payload)))
+        // First try to parse as JSON directly
         try {
-          // Try to parse as JSON
-          const parsed = JSON.parse(decoded)
+          const parsed = JSON.parse(props.json.content.dsseEnvelope.payload)
           return JSON.stringify(parsed, null, 2)
         } catch {
-          // If not valid JSON, return the decoded string
-          return decoded
+          // If not valid JSON, try base64 decoding
+          try {
+            // Check if the string is base64 encoded
+            const isBase64 = /^[A-Za-z0-9+/=]+$/.test(props.json.content.dsseEnvelope.payload)
+            if (!isBase64) {
+              return props.json.content.dsseEnvelope.payload
+            }
+
+            const decoded = decodeURIComponent(escape(atob(props.json.content.dsseEnvelope.payload)))
+            try {
+              // Try to parse as JSON
+              const parsed = JSON.parse(decoded)
+              return JSON.stringify(parsed, null, 2)
+            } catch {
+              // If not valid JSON, return the decoded string
+              return decoded
+            }
+          } catch (e) {
+            console.error('Error decoding DSSE payload:', e)
+            return props.json.content.dsseEnvelope.payload
+          }
         }
       } catch (e) {
-        console.error('Error decoding payload:', e)
-        return 'Unable to decode payload'
+        console.error('Error processing DSSE payload:', e)
+        return 'Unable to process DSSE payload'
       }
     }
 
     // For message signatures, try to decode the message
     if (props.json.content?.messageSignature?.message) {
       try {
-        const decoded = decodeURIComponent(escape(atob(props.json.content.messageSignature.message)))
+        // First try to parse as JSON directly
         try {
-          // Try to parse as JSON
-          const parsed = JSON.parse(decoded)
+          const parsed = JSON.parse(props.json.content.messageSignature.message)
           return JSON.stringify(parsed, null, 2)
         } catch {
-          // If not valid JSON, return the decoded string
-          return decoded
+          // If not valid JSON, try base64 decoding
+          try {
+            // Check if the string is base64 encoded
+            const isBase64 = /^[A-Za-z0-9+/=]+$/.test(props.json.content.messageSignature.message)
+            if (!isBase64) {
+              return props.json.content.messageSignature.message
+            }
+
+            const decoded = decodeURIComponent(escape(atob(props.json.content.messageSignature.message)))
+            try {
+              // Try to parse as JSON
+              const parsed = JSON.parse(decoded)
+              return JSON.stringify(parsed, null, 2)
+            } catch {
+              // If not valid JSON, return the decoded string
+              return decoded
+            }
+          } catch (e) {
+            console.error('Error decoding message:', e)
+            return props.json.content.messageSignature.message
+          }
         }
       } catch (e) {
-        console.error('Error decoding message:', e)
-        return 'Unable to decode message'
+        console.error('Error processing message:', e)
+        return 'Unable to process message'
       }
     }
 

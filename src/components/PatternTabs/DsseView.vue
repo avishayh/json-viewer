@@ -53,21 +53,40 @@ const props = defineProps<{
 }>()
 
 const formattedPayload = computed(() => {
+  if (!props.json.payload) return 'No payload available'
+
   try {
-    // First try to decode the base64 payload
-    const decodedPayload = decodeURIComponent(escape(atob(props.json.payload)))
-    
-    // Try to parse as JSON
+    // First try to parse as JSON directly
     try {
-      const jsonPayload = JSON.parse(decodedPayload)
-      return JSON.stringify(jsonPayload, null, 2)
+      const parsed = JSON.parse(props.json.payload)
+      return JSON.stringify(parsed, null, 2)
     } catch {
-      // If not JSON, return the decoded string
-      return decodedPayload
+      // If not valid JSON, try base64 decoding
+      try {
+        // Check if the string is base64 encoded
+        const isBase64 = /^[A-Za-z0-9+/=]+$/.test(props.json.payload)
+        if (!isBase64) {
+          return props.json.payload
+        }
+
+        const decoded = decodeURIComponent(escape(atob(props.json.payload)))
+        try {
+          // Try to parse as JSON
+          const parsed = JSON.parse(decoded)
+          return JSON.stringify(parsed, null, 2)
+        } catch {
+          // If not valid JSON, return the decoded string
+          return decoded
+        }
+      } catch (e) {
+        console.error('Error decoding payload:', e)
+        // If base64 decoding fails, return the original payload
+        return props.json.payload
+      }
     }
   } catch (e) {
-    console.error('Error decoding payload:', e)
-    return 'Unable to decode payload'
+    console.error('Error processing payload:', e)
+    return 'Unable to process payload'
   }
 })
 </script>
