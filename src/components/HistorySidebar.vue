@@ -39,6 +39,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue'
 import type { HistoryItem } from '../composables/useHistory'
+import { useHistory } from '../composables/useHistory'
 
 export default defineComponent({
   name: 'HistorySidebar',
@@ -60,7 +61,28 @@ export default defineComponent({
       required: true
     }
   },
-  emits: ['load', 'remove', 'clear']
+  emits: ['load', 'remove', 'clear'],
+  setup(props, { emit }) {
+    const { clearHistory } = useHistory()
+
+    const handleLoad = (json: string) => {
+      emit('load', json)
+    }
+
+    const handleRemove = (index: number) => {
+      emit('remove', index)
+    }
+
+    const handleClear = () => {
+      clearHistory()
+    }
+
+    return {
+      handleLoad,
+      handleRemove,
+      handleClear
+    }
+  }
 })
 </script>
 

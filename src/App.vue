@@ -11,7 +11,10 @@
     />
     <div class="main-content">
       <div class="header">
-        <h1>JSON Viewer</h1>
+        <div class="title-section">
+          <h1>JSON Viewer</h1>
+          <ExampleButtons @load-example="handleExampleLoad" />
+        </div>
         <div class="header-actions">
           <button class="theme-toggle" @click="toggleTheme" :title="getThemeTitle()">
             <svg v-if="isDarkTheme()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -47,17 +50,25 @@
       </div>
       
       <div class="input-section">
-        <div class="input-section .example-buttons">
-          <ExampleButtons @load-example="handleExampleLoad" />
+        <div class="input-controls">
+          <textarea
+            v-model="jsonInput"
+            placeholder="Paste your JSON here..."
+            rows="4"
+          ></textarea>
+          <div class="button-group">
+            <button @click="handleParseJson" :disabled="!jsonInput.trim()">
+              Parse JSON
+            </button>
+            <button @click="jsonInput = ''" :disabled="!jsonInput.trim()" class="clear-button" title="Clear input">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
         </div>
-        <textarea
-          v-model="jsonInput"
-          placeholder="Paste your JSON here..."
-          rows="6"
-        ></textarea>
-        <button @click="handleParseJson" :disabled="!jsonInput.trim()">
-          Parse JSON
-        </button>
       </div>
       
       <div v-if="error" class="error">
@@ -125,6 +136,16 @@ const hasPattern = computed(() => {
   const pattern = recognizePattern(parsedJson.value)
   return pattern.type !== 'UNKNOWN'
 })
+
+const getJsonPreview = (json: string): string => {
+  try {
+    const parsed = JSON.parse(json)
+    const stringified = JSON.stringify(parsed)
+    return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified
+  } catch {
+    return json.length > 50 ? json.substring(0, 47) + '...' : json
+  }
+}
 
 onMounted(() => {
   loadHistory()
@@ -225,8 +246,21 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
-  position: relative;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.title-section h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-color);
+  line-height: 1;
 }
 
 .header-actions {
@@ -251,39 +285,59 @@ body {
   color: var(--primary-color);
 }
 
-.theme-toggle svg {
-  width: 24px;
-  height: 24px;
+.about-icon {
+  position: relative;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+  padding: 0.5rem;
+}
+
+.about-icon:hover {
+  color: var(--primary-color);
+}
+
+.about-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  min-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.about-content h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-color);
+}
+
+.about-content p {
+  margin: 0.25rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .input-section {
-  margin-bottom: 2.5rem;
-  max-width: 800px;
-}
-
-.input-section .example-buttons {
-  margin-bottom: 0.75rem;
-}
-
-textarea {
-  width: 100%;
-  padding: 1rem;
   margin-bottom: 1rem;
-  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  resize: vertical;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background-color: var(--surface-color);
-  color: var(--text-primary);
+  padding: 1rem;
 }
 
-textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+.input-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
 }
 
 button {
@@ -295,6 +349,10 @@ button {
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 button:hover:not(:disabled) {
@@ -310,6 +368,42 @@ button:disabled {
   background-color: var(--border-color);
   cursor: not-allowed;
   color: var(--text-secondary);
+}
+
+.clear-button {
+  padding: 0.75rem;
+  background-color: #dc2626; /* bright red */
+  color: white;
+}
+
+.clear-button:hover:not(:disabled) {
+  background-color: #ef4444; /* lighter red */
+  color: white;
+}
+
+.clear-button:disabled {
+  background-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  color: var(--text-color);
+  font-family: monospace;
+  resize: vertical;
+  min-height: 100px;
+  max-height: 200px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .error {
