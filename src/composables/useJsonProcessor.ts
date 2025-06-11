@@ -150,6 +150,14 @@ export function useJsonProcessor() {
     try {
       error.value = ''
       transformedValues.value = []
+      
+      // If input is empty, reset state and return
+      if (!jsonInput.trim()) {
+        parsedJson.value = null
+        lastParsedJson.value = ''
+        return true
+      }
+      
       const jsonData = JSON.parse(jsonInput)
       parsedJson.value = processObject(jsonData)
       lastParsedJson.value = jsonInput

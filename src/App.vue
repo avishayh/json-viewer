@@ -60,7 +60,7 @@
             <button @click="handleParseJson" :disabled="!jsonInput.trim()">
               Parse JSON
             </button>
-            <button @click="jsonInput = ''" :disabled="!jsonInput.trim()" class="clear-button" title="Clear input">
+            <button @click="clearInput" :disabled="!jsonInput.trim()" class="clear-button" title="Clear input">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 6h18"></path>
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
@@ -189,6 +189,25 @@ const loadExample = async (type: string) => {
     console.error('Error loading example:', error)
   }
 }
+
+const clearInput = () => {
+  console.log('Before clear:', {
+    jsonInput: jsonInput.value,
+    parsedJson: parsedJson.value,
+    hasPattern: hasPattern.value
+  });
+  
+  jsonInput.value = '';
+  parseJson('');
+  highlightedPath.value = undefined;
+  error.value = ''; // Reset error state
+  
+  console.log('After clear:', {
+    jsonInput: jsonInput.value,
+    parsedJson: parsedJson.value,
+    hasPattern: hasPattern.value
+  });
+};
 </script>
 
 <style>
