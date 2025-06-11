@@ -3,7 +3,7 @@
     <CustomJsonViewer
       :data="json"
       :highlight-path="highlightedPath"
-      :get-original-value="getOriginalValue"
+      :get-original-value="getOriginalValueOrDefault"
     />
   </div>
 </template>
@@ -14,11 +14,14 @@ import CustomJsonViewer from '../CustomJsonViewer.vue'
 const props = defineProps<{
   json: any
   patternInfo?: any
+  highlightedPath?: string
+  getOriginalValue?: (obj: object) => string | undefined
 }>()
 
-// These props are needed to match the CustomJsonViewer interface
-const highlightedPath = undefined
-const getOriginalValue = undefined
+// Provide a default implementation that returns undefined
+const getOriginalValueOrDefault = (obj: object): string | undefined => {
+  return props.getOriginalValue?.(obj)
+}
 </script>
 
 <style scoped>

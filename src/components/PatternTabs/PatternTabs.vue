@@ -33,7 +33,7 @@ import InTotoView from './InTotoView.vue'
 const props = defineProps<{
   json: any
   highlightedPath?: string
-  getOriginalValue?: (obj: object) => string | undefined
+  getOriginalValue: (obj: object) => string | undefined
 }>()
 
 const { currentPattern, recognizePattern } = usePatternRecognizer()
