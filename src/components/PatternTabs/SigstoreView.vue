@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <div class="content-section">
+    <div v-if="!hasDsseEnvelope" class="content-section">
       <h3>Content</h3>
       <div class="content-type">
         <span class="label">Type:</span>
@@ -35,6 +35,12 @@
       <div class="content-preview">
         <pre><code>{{ formattedContent }}</code></pre>
       </div>
+    </div>
+
+    <div v-else class="content-section">
+      <button @click="viewDsseContent" class="action-button">
+        View DSSE Content
+      </button>
     </div>
 
     <div class="verification-section" v-if="patternInfo.metadata.hasVerificationMaterial">
@@ -50,39 +56,71 @@
 import { computed } from 'vue'
 import type { PatternInfo } from '../../composables/patternRecognizer'
 
+interface SigstoreMetadata {
+  mediaType?: string
+  tlogEntryCount?: number
+  hasCertificateChain?: boolean
+  hasRekorEntry?: boolean
+  hasBundle?: boolean
+  hasProducts?: boolean
+  hasTimestamp?: boolean
+  hasVerificationMaterial?: boolean
+}
+
 const props = defineProps<{
   json: any
-  patternInfo: PatternInfo
+  patternInfo: PatternInfo & { metadata: SigstoreMetadata }
+}>()
+
+const emit = defineEmits<{
+  (e: 'load-payload', payload: string): void
 }>()
 
 const contentType = computed(() => {
   if (props.json.content?.messageSignature) return 'Message Signature'
   if (props.json.content?.dsseEnvelope) return 'DSSE Envelope'
+  if (props.json.dsseEnvelope) return 'DSSE Envelope'
+  if (props.json.content?.bundle) return 'Bundle'
   return 'Unknown'
 })
 
+const hasDsseEnvelope = computed(() => {
+  return !!props.json.dsseEnvelope || !!props.json.content?.dsseEnvelope
+})
+
+const viewDsseContent = () => {
+  const dsseEnvelope = props.json.dsseEnvelope || props.json.content?.dsseEnvelope
+  if (dsseEnvelope) {
+    emit('load-payload', JSON.stringify(dsseEnvelope))
+  }
+}
+
 const formattedContent = computed(() => {
   try {
-    const content = props.json.content?.messageSignature || props.json.content?.dsseEnvelope
+    const content = props.json.content?.messageSignature || 
+                   props.json.content?.dsseEnvelope || 
+                   props.json.dsseEnvelope ||
+                   props.json.content?.bundle
     if (!content) return 'No content available'
 
     // If it's a DSSE envelope, try to decode the payload
-    if (props.json.content?.dsseEnvelope?.payload) {
+    if (props.json.dsseEnvelope?.payload || props.json.content?.dsseEnvelope?.payload) {
+      const payload = props.json.dsseEnvelope?.payload || props.json.content?.dsseEnvelope?.payload
       try {
         // First try to parse as JSON directly
         try {
-          const parsed = JSON.parse(props.json.content.dsseEnvelope.payload)
+          const parsed = JSON.parse(payload)
           return JSON.stringify(parsed, null, 2)
         } catch {
           // If not valid JSON, try base64 decoding
           try {
             // Check if the string is base64 encoded
-            const isBase64 = /^[A-Za-z0-9+/=]+$/.test(props.json.content.dsseEnvelope.payload)
+            const isBase64 = /^[A-Za-z0-9+/=]+$/.test(payload)
             if (!isBase64) {
-              return props.json.content.dsseEnvelope.payload
+              return payload
             }
 
-            const decoded = decodeURIComponent(escape(atob(props.json.content.dsseEnvelope.payload)))
+            const decoded = decodeURIComponent(escape(atob(payload)))
             try {
               // Try to parse as JSON
               const parsed = JSON.parse(decoded)
@@ -93,7 +131,7 @@ const formattedContent = computed(() => {
             }
           } catch (e) {
             console.error('Error decoding DSSE payload:', e)
-            return props.json.content.dsseEnvelope.payload
+            return payload
           }
         }
       } catch (e) {
@@ -138,6 +176,11 @@ const formattedContent = computed(() => {
       }
     }
 
+    // For bundle content
+    if (props.json.content?.bundle) {
+      return JSON.stringify(props.json.content.bundle, null, 2)
+    }
+
     return JSON.stringify(content, null, 2)
   } catch (e) {
     console.error('Error formatting content:', e)
@@ -147,6 +190,7 @@ const formattedContent = computed(() => {
 
 const formattedVerification = computed(() => {
   try {
+    if (!props.json.verificationMaterial) return 'No verification material available'
     return JSON.stringify(props.json.verificationMaterial, null, 2)
   } catch (e) {
     console.error('Error formatting verification material:', e)
@@ -247,5 +291,36 @@ pre {
 
 code {
   color: var(--text-color);
+}
+
+.content-section {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-button {
+  width: 100%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.action-button:hover {
+  background-color: var(--primary-hover);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style> 

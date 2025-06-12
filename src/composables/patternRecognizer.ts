@@ -21,6 +21,8 @@ interface SigstoreMetadata {
   hasRekorEntry?: boolean
   hasBundle?: boolean
   hasProducts?: boolean
+  hasTimestamp?: boolean
+  hasVerificationMaterial?: boolean
 }
 
 interface InTotoMetadata {
@@ -97,11 +99,13 @@ export function usePatternRecognizer() {
       patternInfo.confidence = 0.9
       patternInfo.metadata = {
         mediaType: json.mediaType,
-        tlogEntryCount: json.tlogEntries?.length || 0,
-        hasCertificateChain: !!json.verificationMaterial?.x509CertificateChain,
-        hasRekorEntry: !!json.tlogEntries?.length,
+        tlogEntryCount: json.verificationMaterial?.tlogEntries?.length || 0,
+        hasCertificateChain: !!json.verificationMaterial?.certificate?.rawBytes,
+        hasRekorEntry: !!json.verificationMaterial?.tlogEntries?.length,
         hasBundle: true,
-        hasProducts: !!json.verificationMaterial?.products
+        hasProducts: !!json.verificationMaterial?.products,
+        hasTimestamp: !!json.verificationMaterial?.timestampVerificationData,
+        hasVerificationMaterial: !!json.verificationMaterial
       }
     }
     // Check for direct in-toto pattern

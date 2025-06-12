@@ -3,21 +3,36 @@
     <div class="tabs-header">
       <button
         v-for="tab in availableTabs"
-        :key="tab.id"
-        :class="['tab-button', { active: currentTab === tab.id }]"
-        @click="currentTab = tab.id"
+        :key="tab"
+        :class="['tab-button', { active: activeTab === tab }]"
+        @click="setActiveTab(tab)"
       >
-        {{ tab.label }}
+        {{ tab }}
       </button>
     </div>
+
     <div class="tab-content">
-      <component
-        :is="currentTabComponent"
+      <DsseView
+        v-if="activeTab === 'DSSE'"
         :json="json"
         :pattern-info="patternInfo"
-        :highlight-path="highlightedPath"
-        :get-original-value="getOriginalValue"
         @load-payload="handleLoadPayload"
+      />
+      <SigstoreView
+        v-if="activeTab === 'SIGSTORE'"
+        :json="json"
+        :pattern-info="patternInfo"
+        @load-payload="handleLoadPayload"
+      />
+      <InTotoView
+        v-if="activeTab === 'INTOTO'"
+        :json="json"
+        :pattern-info="patternInfo"
+      />
+      <RawJsonView
+        v-if="activeTab === 'RAW'"
+        :json="json"
+        :get-original-value="getOriginalValue"
       />
     </div>
   </div>
@@ -26,76 +41,53 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { usePatternRecognizer, type PatternType } from '../../composables/patternRecognizer'
-import RawJsonView from './RawJsonView.vue'
 import DsseView from './DsseView.vue'
 import SigstoreView from './SigstoreView.vue'
 import InTotoView from './InTotoView.vue'
+import RawJsonView from './RawJsonView.vue'
 
-const emit = defineEmits<{
-  (e: 'load-payload', payload: string): void
-}>()
+type TabType = PatternType | 'RAW'
 
 const props = defineProps<{
   json: any
-  highlightedPath?: string
-  getOriginalValue: (obj: object) => string | undefined
+  getOriginalValue: (path: string) => any
+}>()
+
+const emit = defineEmits<{
+  (e: 'load-payload', payload: any): void
 }>()
 
 const { currentPattern, recognizePattern } = usePatternRecognizer()
 
-const patternInfo = computed(() => {
-  return recognizePattern(props.json)
-})
-
-const currentTab = ref('raw')
-
-// Watch for pattern type changes and reset to raw JSON view
-watch(() => patternInfo.value.type, (newType) => {
-  // Only reset to raw if we're not explicitly loading an in-toto payload
-  if (newType !== 'INTOTO') {
-    currentTab.value = 'raw'
-  }
-})
+const activeTab = ref<TabType>('UNKNOWN')
 
 const availableTabs = computed(() => {
-  const tabs = [
-    { id: 'raw', label: 'Raw JSON' }
-  ]
-
-  if (patternInfo.value.type === 'DSSE') {
-    tabs.push({ id: 'dsse', label: 'DSSE View' })
+  const tabs: TabType[] = ['RAW']
+  if (currentPattern.value.type !== 'UNKNOWN') {
+    tabs.unshift(currentPattern.value.type)
   }
-
-  if (patternInfo.value.type === 'SIGSTORE') {
-    tabs.push({ id: 'sigstore', label: 'Sigstore View' })
-  }
-
-  if (patternInfo.value.type === 'INTOTO') {
-    tabs.push({ id: 'intoto', label: 'In-toto View' })
-  }
-
   return tabs
 })
 
-const currentTabComponent = computed(() => {
-  switch (currentTab.value) {
-    case 'raw':
-      return RawJsonView
-    case 'dsse':
-      return DsseView
-    case 'sigstore':
-      return SigstoreView
-    case 'intoto':
-      return InTotoView
-    default:
-      return RawJsonView
-  }
-})
+const patternInfo = computed(() => currentPattern.value)
 
-const handleLoadPayload = (payload: string) => {
+watch(() => props.json, (newJson) => {
+  if (newJson) {
+    const pattern = recognizePattern(newJson)
+    activeTab.value = pattern.type
+  } else {
+    activeTab.value = 'UNKNOWN'
+  }
+}, { immediate: true })
+
+const setActiveTab = (tab: TabType) => {
+  activeTab.value = tab
+}
+
+const handleLoadPayload = (payload: any) => {
   emit('load-payload', payload)
-  // Force switch to In-toto tab
-  currentTab.value = 'intoto'
+  // After emitting, switch to DSSE tab
+  activeTab.value = 'DSSE'
 }
 </script>
 
