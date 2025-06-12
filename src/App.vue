@@ -13,36 +13,37 @@
       <div class="header">
         <div class="title-section">
           <h1>JSON Viewer</h1>
-          <ExampleButtons @load-example="handleExampleLoad" />
         </div>
         <div class="header-actions">
-          <button class="theme-toggle" @click="toggleTheme" :title="getThemeTitle()">
-            <svg v-if="isDarkTheme()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-          </button>
-          <div class="about-icon" @click="showAbout = !showAbout">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-            <div v-if="showAbout" class="about-popup">
-              <div class="about-content">
-                <h3>About</h3>
-                <p>Version: {{ version }}</p>
-                <p>Last updated: {{ lastUpdated }}</p>
+          <div class="action-buttons">
+            <button class="theme-toggle" @click="toggleTheme" :title="getThemeTitle()">
+              <svg v-if="isDarkTheme()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+            <div class="about-icon" @click="showAbout = !showAbout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <div v-if="showAbout" class="about-popup">
+                <div class="about-content">
+                  <h3>About</h3>
+                  <p>Version: {{ version }}</p>
+                  <p>Last updated: {{ lastUpdated }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -56,17 +57,20 @@
             placeholder="Paste your JSON here..."
             rows="4"
           ></textarea>
-          <div class="button-group">
-            <button @click="handleParseJson" :disabled="!jsonInput.trim()">
-              Parse JSON
-            </button>
-            <button @click="clearInput" :disabled="!jsonInput.trim()" class="clear-button" title="Clear input">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6h18"></path>
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-              </svg>
-            </button>
+          <div class="controls-row">
+            <ExampleButtons @load-example="handleExampleLoad" />
+            <div class="button-group">
+              <button @click="handleParseJson" :disabled="!jsonInput.trim()" class="parse-button">
+                Parse JSON
+              </button>
+              <button @click="clearInput" :disabled="!jsonInput.trim()" class="clear-button" title="Clear input">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -263,7 +267,7 @@ body {
 
 .main-content {
   flex: 1;
-  padding: 2.5rem;
+  padding: 0;
   overflow-y: auto;
   background-color: var(--surface-color);
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
@@ -273,20 +277,25 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding: 0.5rem 0;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  height: 48px;
+  box-sizing: border-box;
 }
 
 .title-section {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
+  height: 100%;
 }
 
 .title-section h1 {
   margin: 0;
-  font-size: 1.5rem;
-  color: var(--text-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -296,32 +305,33 @@ body {
   gap: 1rem;
 }
 
-.theme-toggle {
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.theme-toggle,
+.about-icon {
   background: none;
   border: none;
   padding: 0.5rem;
   cursor: pointer;
-  color: var(--text-secondary);
-  transition: color 0.2s;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
 
-.theme-toggle:hover {
-  color: var(--primary-color);
+.theme-toggle:hover,
+.about-icon:hover {
+  background-color: var(--bg-hover);
 }
 
 .about-icon {
   position: relative;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-  padding: 0.5rem;
-}
-
-.about-icon:hover {
-  color: var(--primary-color);
 }
 
 .about-popup {
@@ -329,18 +339,21 @@ body {
   top: 100%;
   right: 0;
   margin-top: 0.5rem;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.about-content {
   padding: 1rem;
   min-width: 200px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 100;
 }
 
 .about-content h3 {
   margin: 0 0 0.5rem 0;
-  color: var(--text-color);
+  color: var(--text-primary);
 }
 
 .about-content p {
@@ -350,10 +363,9 @@ body {
 }
 
 .input-section {
-  margin-bottom: 1rem;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
   padding: 1rem;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .input-controls {
@@ -362,75 +374,75 @@ body {
   gap: 0.5rem;
 }
 
+textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: monospace;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
 .button-group {
   display: flex;
   gap: 0.5rem;
 }
 
 button {
-  padding: 0.75rem 2rem;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.2s, transform 0.1s;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
+  transition: all 0.2s;
 }
 
 button:hover:not(:disabled) {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(0);
+  background-color: var(--bg-hover);
 }
 
 button:disabled {
-  background-color: var(--border-color);
+  opacity: 0.5;
   cursor: not-allowed;
-  color: var(--text-secondary);
+}
+
+.parse-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+}
+
+.parse-button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
 }
 
 .clear-button {
-  padding: 0.75rem;
-  background-color: #dc2626; /* bright red */
+  background-color: #dc2626;
   color: white;
+  border: none;
 }
 
 .clear-button:hover:not(:disabled) {
-  background-color: #ef4444; /* lighter red */
-  color: white;
+  background-color: #ef4444;
 }
 
 .clear-button:disabled {
-  background-color: var(--border-color);
-  color: var(--text-secondary);
-}
-
-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--bg-primary);
-  color: var(--text-color);
-  font-family: monospace;
-  resize: vertical;
-  min-height: 100px;
-  max-height: 200px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background-color: #9ca3af;
 }
 
 .error {
@@ -554,5 +566,39 @@ h1 {
   background-color: var(--border-color);
   cursor: not-allowed;
   color: var(--text-secondary);
+}
+
+.history-panel {
+  width: 250px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
 }
 </style> 
