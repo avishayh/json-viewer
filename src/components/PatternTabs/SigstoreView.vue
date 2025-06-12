@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { PatternInfo } from '../../composables/usePatternRecognizer'
+import type { PatternInfo } from '../../composables/patternRecognizer'
 
 const props = defineProps<{
   json: any

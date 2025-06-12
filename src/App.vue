@@ -82,6 +82,7 @@
             :json="parsedJson"
             :highlight-path="highlightedPath"
             :get-original-value="getOriginalValue"
+            @load-payload="handleLoadPayload"
           />
           <CustomJsonViewer
             v-else
@@ -100,11 +101,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
 import { useHistory, type HistoryItem } from './composables/useHistory'
 import { useTheme } from './composables/useTheme'
-import { usePatternRecognizer } from './composables/usePatternRecognizer'
+import { usePatternRecognizer } from './composables/patternRecognizer'
 import CustomJsonViewer from './components/CustomJsonViewer.vue'
 import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
 import PatternTabs from './components/PatternTabs/PatternTabs.vue'
@@ -208,6 +209,13 @@ const clearInput = () => {
     hasPattern: hasPattern.value
   });
 };
+
+const handleLoadPayload = async (payload: string) => {
+  jsonInput.value = payload
+  await parseJson(payload)
+  // Wait for next tick to ensure pattern recognition is complete
+  await nextTick()
+}
 </script>
 
 <style>

@@ -5,19 +5,27 @@
       <div class="metadata-grid">
         <div class="metadata-item">
           <span class="label">Payload Type:</span>
-          <span class="value">{{ patternInfo.metadata.payloadType }}</span>
+          <span class="value">{{ (patternInfo.metadata as DsseMetadata).payloadType }}</span>
         </div>
         <div class="metadata-item">
           <span class="label">Signature Count:</span>
-          <span class="value">{{ patternInfo.metadata.signatureCount }}</span>
+          <span class="value">{{ (patternInfo.metadata as DsseMetadata).signatureCount }}</span>
+        </div>
+        <div class="metadata-item" v-if="(patternInfo.metadata as DsseMetadata).digest">
+          <span class="label">Digest:</span>
+          <span class="value">{{ (patternInfo.metadata as DsseMetadata).digest }}</span>
+        </div>
+        <div class="metadata-item" v-if="(patternInfo.metadata as DsseMetadata).subjectName">
+          <span class="label">Subject:</span>
+          <span class="value">{{ (patternInfo.metadata as DsseMetadata).subjectName }}</span>
         </div>
       </div>
     </div>
 
-    <div class="signatures-section" v-if="patternInfo.metadata.signatures?.length">
+    <div class="signatures-section" v-if="(patternInfo.metadata as DsseMetadata).signatures?.length">
       <h3>Signatures</h3>
       <div class="signature-list">
-        <div v-for="(sig, index) in patternInfo.metadata.signatures" :key="index" class="signature-item">
+        <div v-for="(sig, index) in (patternInfo.metadata as DsseMetadata).signatures" :key="index" class="signature-item">
           <div class="signature-header">
             <span class="signature-index">Signature #{{ index + 1 }}</span>
             <div class="keyid-container">
@@ -34,61 +42,87 @@
       </div>
     </div>
 
-    <div class="payload-section">
-      <h3>Payload</h3>
-      <div class="payload-content">
-        <pre><code>{{ formattedPayload }}</code></pre>
-      </div>
+    <div v-if="isInTotoPayload" class="in-toto-section">
+      <button @click="loadInTotoPayload" class="load-button">
+        View In-toto Statement
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { PatternInfo } from '../../composables/usePatternRecognizer'
+import type { PatternInfo } from '../../composables/patternRecognizer'
+
+interface DsseMetadata {
+  payloadType?: string
+  signatureCount?: number
+  digest?: string
+  subjectName?: string
+  predicate?: any
+  signatures?: Array<{
+    keyid?: string
+    hasCert?: boolean
+  }>
+}
 
 const props = defineProps<{
   json: any
   patternInfo: PatternInfo
 }>()
 
-const formattedPayload = computed(() => {
-  if (!props.json.payload) return 'No payload available'
+const emit = defineEmits<{
+  (e: 'load-payload', payload: string): void
+}>()
+
+const isInTotoPayload = computed(() => {
+  const metadata = props.patternInfo.metadata as DsseMetadata
+  return metadata.payloadType === 'application/vnd.in-toto+json'
+})
+
+const loadInTotoPayload = () => {
+  if (!props.json.payload) return
 
   try {
-    // First try to parse as JSON directly
-    try {
-      const parsed = JSON.parse(props.json.payload)
-      return JSON.stringify(parsed, null, 2)
-    } catch {
-      // If not valid JSON, try base64 decoding
-      try {
-        // Check if the string is base64 encoded
-        const isBase64 = /^[A-Za-z0-9+/=]+$/.test(props.json.payload)
-        if (!isBase64) {
-          return props.json.payload
-        }
+    // If payload is already an object, stringify it
+    if (typeof props.json.payload === 'object') {
+      emit('load-payload', JSON.stringify(props.json.payload, null, 2))
+      return
+    }
 
-        const decoded = decodeURIComponent(escape(atob(props.json.payload)))
+    // If payload is a string, try to parse it
+    if (typeof props.json.payload === 'string') {
+      try {
+        // First try to parse as JSON
+        const parsed = JSON.parse(props.json.payload)
+        emit('load-payload', JSON.stringify(parsed, null, 2))
+        return
+      } catch {
+        // If not valid JSON, try base64 decoding
         try {
-          // Try to parse as JSON
-          const parsed = JSON.parse(decoded)
-          return JSON.stringify(parsed, null, 2)
-        } catch {
-          // If not valid JSON, return the decoded string
-          return decoded
+          // Handle URL-safe base64
+          const base64 = props.json.payload.replace(/-/g, '+').replace(/_/g, '/')
+          const decoded = atob(base64)
+          try {
+            // Try to parse as JSON after decoding
+            const parsed = JSON.parse(decoded)
+            emit('load-payload', JSON.stringify(parsed, null, 2))
+          } catch {
+            // If not valid JSON, emit the decoded string
+            emit('load-payload', decoded)
+          }
+        } catch (e) {
+          console.error('Error decoding payload:', e)
+          // If base64 decoding fails, try to use the original payload
+          emit('load-payload', props.json.payload)
         }
-      } catch (e) {
-        console.error('Error decoding payload:', e)
-        // If base64 decoding fails, return the original payload
-        return props.json.payload
       }
     }
   } catch (e) {
     console.error('Error processing payload:', e)
-    return 'Unable to process payload'
+    emit('load-payload', JSON.stringify(props.json.payload, null, 2))
   }
-})
+}
 </script>
 
 <style scoped>
@@ -102,7 +136,7 @@ const formattedPayload = computed(() => {
 
 .metadata-section,
 .signatures-section,
-.payload-section {
+.in-toto-section {
   background-color: var(--bg-secondary);
   border-radius: 4px;
   padding: 1rem;
@@ -193,22 +227,18 @@ h3 {
   background-color: var(--success-bg);
 }
 
-.payload-content {
-  background-color: var(--bg-primary);
+.load-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
-  padding: 1rem;
-  overflow: auto;
-  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-weight: 500;
+  width: 100%;
 }
 
-pre {
-  margin: 0;
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-code {
-  color: var(--text-primary);
+.load-button:hover {
+  background-color: var(--primary-hover);
 }
 </style> 

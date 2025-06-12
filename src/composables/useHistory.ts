@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { usePatternRecognizer } from './usePatternRecognizer'
+import { usePatternRecognizer } from './patternRecognizer'
 
 export interface HistoryItem {
   json: string

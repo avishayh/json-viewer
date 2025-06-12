@@ -1,39 +1,28 @@
 <template>
-  <div class="intoto-view">
+  <div class="in-toto-view">
     <div class="metadata-section">
-      <h3>In-toto Statement Metadata</h3>
+      <h3>In-toto Metadata</h3>
       <div class="metadata-grid">
         <div class="metadata-item">
           <span class="label">Statement Type:</span>
-          <span class="value">{{ patternInfo.metadata.statementType }}</span>
+          <span class="value">{{ (patternInfo.metadata as InTotoMetadata).statementType }}</span>
         </div>
         <div class="metadata-item">
           <span class="label">Subject Count:</span>
-          <span class="value">{{ patternInfo.metadata.subjectCount }}</span>
+          <span class="value">{{ (patternInfo.metadata as InTotoMetadata).subjectCount }}</span>
+        </div>
+        <div class="metadata-item" v-if="(patternInfo.metadata as InTotoMetadata).subjectName">
+          <span class="label">Subject Name:</span>
+          <span class="value">{{ (patternInfo.metadata as InTotoMetadata).subjectName }}</span>
+        </div>
+        <div class="metadata-item" v-if="(patternInfo.metadata as InTotoMetadata).digest">
+          <span class="label">Digest:</span>
+          <span class="value">{{ (patternInfo.metadata as InTotoMetadata).digest }}</span>
         </div>
         <div class="metadata-item">
           <span class="label">Predicate Type:</span>
-          <span class="value">{{ patternInfo.metadata.predicateType }}</span>
+          <span class="value">{{ (patternInfo.metadata as InTotoMetadata).predicateType }}</span>
         </div>
-        <div class="metadata-item">
-          <span class="label">Materials:</span>
-          <span class="value" :class="{ 'has-value': patternInfo.metadata.hasMaterials }">
-            {{ patternInfo.metadata.hasMaterials ? 'Present' : 'Not Present' }}
-          </span>
-        </div>
-        <div class="metadata-item">
-          <span class="label">Products:</span>
-          <span class="value" :class="{ 'has-value': patternInfo.metadata.hasProducts }">
-            {{ patternInfo.metadata.hasProducts ? 'Present' : 'Not Present' }}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div class="content-section">
-      <h3>Statement Content</h3>
-      <div class="content-preview">
-        <pre><code>{{ formattedContent }}</code></pre>
       </div>
     </div>
 
@@ -49,7 +38,7 @@
       </div>
     </div>
 
-    <div class="predicate-section" v-if="json.predicate">
+    <div class="predicate-section">
       <h3>Predicate</h3>
       <div class="predicate-content">
         <pre><code>{{ formattedPredicate }}</code></pre>
@@ -60,29 +49,24 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { PatternInfo } from '../../composables/usePatternRecognizer'
+import type { PatternInfo } from '../../composables/patternRecognizer'
+
+interface InTotoMetadata {
+  statementType?: string
+  subjectCount?: number
+  subjectName?: string
+  digest?: string
+  predicateType?: string
+}
 
 const props = defineProps<{
   json: any
   patternInfo: PatternInfo
 }>()
 
-const formattedContent = computed(() => {
-  try {
-    return JSON.stringify(props.json, null, 2)
-  } catch (e) {
-    console.error('Error formatting content:', e)
-    return 'Unable to format content'
-  }
-})
-
 const formattedPredicate = computed(() => {
-  try {
-    return JSON.stringify(props.json.predicate, null, 2)
-  } catch (e) {
-    console.error('Error formatting predicate:', e)
-    return 'Unable to format predicate'
-  }
+  if (!props.json.predicate) return 'No predicate available'
+  return JSON.stringify(props.json.predicate, null, 2)
 })
 
 const formatDigest = (digest: Record<string, string>) => {
@@ -93,28 +77,23 @@ const formatDigest = (digest: Record<string, string>) => {
 </script>
 
 <style scoped>
-.intoto-view {
+.in-toto-view {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   height: 100%;
   overflow: auto;
-  padding: 1rem;
 }
 
-.metadata-section,
-.content-section,
-.subjects-section,
-.predicate-section {
+.metadata-section {
   background-color: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 1rem;
 }
 
 h3 {
   margin: 0 0 1rem 0;
-  color: var(--text-color);
+  color: var(--text-primary);
   font-size: 1.1rem;
   font-weight: 600;
 }
@@ -129,10 +108,6 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 0.75rem;
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
 }
 
 .label {
@@ -144,23 +119,15 @@ h3 {
 .value {
   font-family: monospace;
   word-break: break-all;
-  color: var(--text-color);
-  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
-.value.has-value {
-  color: var(--success-color);
-  font-weight: 500;
-}
-
-.content-preview,
-.predicate-content {
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  padding: 1rem;
-  overflow: auto;
-  border: 1px solid var(--border-color);
-  max-height: 400px;
+.subjects-section,
+.predicate-section {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .subjects-list {
@@ -192,6 +159,15 @@ h3 {
   font-family: monospace;
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+.predicate-content {
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  max-height: 400px;
 }
 
 pre {

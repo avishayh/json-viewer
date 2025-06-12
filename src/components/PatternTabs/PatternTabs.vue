@@ -17,6 +17,7 @@
         :pattern-info="patternInfo"
         :highlight-path="highlightedPath"
         :get-original-value="getOriginalValue"
+        @load-payload="handleLoadPayload"
       />
     </div>
   </div>
@@ -24,11 +25,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { usePatternRecognizer, type PatternType } from '../../composables/usePatternRecognizer'
+import { usePatternRecognizer, type PatternType } from '../../composables/patternRecognizer'
 import RawJsonView from './RawJsonView.vue'
 import DsseView from './DsseView.vue'
 import SigstoreView from './SigstoreView.vue'
 import InTotoView from './InTotoView.vue'
+
+const emit = defineEmits<{
+  (e: 'load-payload', payload: string): void
+}>()
 
 const props = defineProps<{
   json: any
@@ -45,8 +50,11 @@ const patternInfo = computed(() => {
 const currentTab = ref('raw')
 
 // Watch for pattern type changes and reset to raw JSON view
-watch(() => patternInfo.value.type, () => {
-  currentTab.value = 'raw'
+watch(() => patternInfo.value.type, (newType) => {
+  // Only reset to raw if we're not explicitly loading an in-toto payload
+  if (newType !== 'INTOTO') {
+    currentTab.value = 'raw'
+  }
 })
 
 const availableTabs = computed(() => {
@@ -83,6 +91,12 @@ const currentTabComponent = computed(() => {
       return RawJsonView
   }
 })
+
+const handleLoadPayload = (payload: string) => {
+  emit('load-payload', payload)
+  // Force switch to In-toto tab
+  currentTab.value = 'intoto'
+}
 </script>
 
 <style scoped>
