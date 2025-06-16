@@ -21,7 +21,21 @@
         @click="$emit('load', item)"
       >
         <div class="history-item-header">
-          <h3 class="history-item-title">{{ getHistoryTitle(item, index) }}</h3>
+          <div class="history-item-title-container">
+            <svg v-if="item.patternType === 'DSSE'" class="pattern-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+            <svg v-else-if="item.patternType === 'SIGSTORE'" class="pattern-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <svg v-else-if="item.patternType === 'INTOTO'" class="pattern-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h3 class="history-item-title">{{ getHistoryTitle(item, index) }}</h3>
+          </div>
           <span class="history-item-timestamp">{{ formatTimestamp(item.timestamp) }}</span>
         </div>
         <div class="history-item-preview">{{ getPreview(item) }}</div>
@@ -181,6 +195,19 @@ export default defineComponent({
   align-items: center;
   margin-bottom: 0.5rem;
   padding-right: 1.5rem;
+}
+
+.history-item-title-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.pattern-icon {
+  flex-shrink: 0;
+  color: var(--primary-color);
 }
 
 .history-item-title {
