@@ -82,17 +82,10 @@
       <div v-if="parsedJson" class="content-wrapper">
         <div class="json-section">
           <PatternTabs 
-            v-if="hasPattern" 
             :json="parsedJson"
             :highlight-path="highlightedPath"
             :get-original-value="getOriginalValue"
             @load-payload="handleLoadPayload"
-          />
-          <CustomJsonViewer
-            v-else
-            :data="parsedJson"
-            :highlight-path="highlightedPath"
-            :get-original-value="getOriginalValue"
           />
         </div>
         <TransformedValuesPanel
