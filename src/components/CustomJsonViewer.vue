@@ -182,8 +182,6 @@ export default defineComponent({
     }
 
     // Patch handleRendered to also add timestamp tooltips
-    let handleRendered = () => {};
-    const originalHandleRendered = handleRendered;
     const patchedHandleRendered = () => {
       setTimeout(() => {
         addIconsToTransformedFields();

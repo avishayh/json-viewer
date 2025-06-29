@@ -104,7 +104,7 @@ export function useJsonProcessor() {
       console.log(`${path} : [JSON] Processing`)
       const processed = processObject(parsedJson, path)
       if (processed && typeof processed === 'object') {
-        originalValues.set(processed, value)
+        originalValues.set(processed, String(value))
         transformedValues.value.push({
           path,
           type: 'JSON',
@@ -164,7 +164,7 @@ export function useJsonProcessor() {
         if (typeof item === 'string' || typeof item === 'number') {
           const processed = processValue(item, currentPath)
           if (processed && typeof processed === 'object') {
-            originalValues.set(processed, item)
+            originalValues.set(processed, String(item))
           }
           return processed
         } else {
@@ -181,7 +181,7 @@ export function useJsonProcessor() {
           const processed = processValue(value, currentPath)
           result[key] = processed
           if (processed && typeof processed === 'object') {
-            originalValues.set(processed, value)
+            originalValues.set(processed, String(value))
           }
         } else {
           result[key] = processObject(value, currentPath)
