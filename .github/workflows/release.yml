@@ -33,11 +33,17 @@ jobs:
           jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create release branch
+      - name: Fetch all branches
+        run: git fetch --all
+
+      - name: Create or switch to release branch
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git checkout -b releases/v${{ steps.bump_version.outputs.new_version }}
+          if git ls-remote --exit-code --heads origin releases/v${{ steps.bump_version.outputs.new_version }}; then
+            git checkout releases/v${{ steps.bump_version.outputs.new_version }}
+            git pull origin releases/v${{ steps.bump_version.outputs.new_version }}
+          else
+            git checkout -b releases/v${{ steps.bump_version.outputs.new_version }}
+          fi
 
       - name: Set up GitHub token for pushing
         run: |
