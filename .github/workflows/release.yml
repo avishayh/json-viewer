@@ -22,27 +22,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Calculate next version
-        id: calc_version
-        run: |
-          VERSION=$(jq -r '.version' version.json)
-          IFS='.' read -r major minor patch <<< "$VERSION"
-          NEW_PATCH=$((patch + 1))
-          NEW_VERSION="$major.$minor.$NEW_PATCH"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Fetch all branches
-        run: git fetch --all
-
-      - name: Create or switch to release branch
-        run: |
-          if git ls-remote --exit-code --heads origin releases/v${{ steps.calc_version.outputs.new_version }}; then
-            git checkout releases/v${{ steps.calc_version.outputs.new_version }}
-            git pull origin releases/v${{ steps.calc_version.outputs.new_version }}
-          else
-            git checkout -b releases/v${{ steps.calc_version.outputs.new_version }}
-          fi
-
       - name: Set up GitHub token for pushing
         run: |
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
@@ -52,41 +31,31 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Bump patch version in version.json
-        run: |
-          jq --arg v "${{ steps.calc_version.outputs.new_version }}" '.version = $v' version.json > tmp.json && mv tmp.json version.json
-          jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
-
-      - name: Commit version bump
-        run: |
-          ls -la
-          git add version.json
-          git commit -m "chore: bump version to v${{ steps.calc_version.outputs.new_version }}"
-
-      - name: Push release branch (version bump)
-        run: |
-          git push origin releases/v${{ steps.calc_version.outputs.new_version }}
-
-      - name: Show effective npm registry before cleanup
-        run: npm config get registry
-
       - name: Use public npm registry
         run: npm config set registry https://registry.npmjs.org/
-
-      - name: Show effective npm registry after cleanup
-        run: npm config get registry
 
       - name: Install dependencies
         run: npm install
 
+      - name: Get version from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build project
         run: npm run build
 
-      - name: Commit build output
+      - name: Copy build output to releases/version folder
         run: |
-          git add dist/
-          git commit -m "chore: add build output for v${{ steps.calc_version.outputs.new_version }}" || echo "No changes to commit"
+          mkdir -p releases/${{ steps.get_version.outputs.version }}
+          cp -r dist/* releases/${{ steps.get_version.outputs.version }}/
 
-      - name: Push build output
+      - name: Commit releases folder
         run: |
-          git push origin releases/v${{ steps.calc_version.outputs.new_version }} 
+          git add releases/
+          git commit -m "chore: add release for v${{ steps.get_version.outputs.version }}" || echo "No changes to commit"
+
+      - name: Push releases folder
+        run: |
+          git push origin master 
