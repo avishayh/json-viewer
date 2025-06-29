@@ -12,12 +12,13 @@
         :show-line="true"
         :show-icon="true"
         :path-selectable="true"
+        :render-node-value="renderNodeValue"
         @rendered="handleRendered"
       />
     </div>
     <div v-if="tooltipVisible" class="tooltip" :style="tooltipStyle">
       <div class="tooltip-content">
-        <div class="tooltip-header">Original Value:</div>
+        <div class="tooltip-header">{{ tooltipHeader }}</div>
         <pre>{{ tooltipContent }}</pre>
       </div>
     </div>
@@ -25,9 +26,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { defineComponent, ref, PropType, onMounted, onBeforeUnmount, watch, nextTick, h } from 'vue'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+dayjs.extend(relativeTime)
 
 type JsonValue = string | number | boolean | null | Record<string, any> | any[]
 
@@ -59,6 +63,34 @@ export default defineComponent({
       left: '0px'
     })
     const jsonViewerRef = ref<HTMLElement | null>(null)
+    const tooltipHeader = ref('');
+
+    // Timestamp detection regexes
+    const iso8601Regex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?([+-]\d{2}:?\d{2})?/;
+    const unixEpochRegex = /^(\d{10}|\d{13})$/;
+
+    // Helper to check if a string is a timestamp
+    function isTimestamp(value: string | number): boolean {
+      if (typeof value !== 'string' && typeof value !== 'number') return false;
+      if (typeof value === 'string' && iso8601Regex.test(value)) return true;
+      if (typeof value === 'string' && unixEpochRegex.test(value)) return true;
+      if (typeof value === 'number' && unixEpochRegex.test(value.toString())) return true;
+      return false;
+    }
+
+    // Helper to format timestamp
+    function formatTimestamp(value: string | number): string {
+      let date;
+      if (typeof value === 'string' && iso8601Regex.test(value)) {
+        date = dayjs(value);
+      } else if (typeof value === 'string' && unixEpochRegex.test(value)) {
+        date = dayjs(parseInt(value.length === 13 ? value : value + '000'));
+      } else if (typeof value === 'number' && unixEpochRegex.test(value.toString())) {
+        date = dayjs(value.toString().length === 13 ? value : value * 1000);
+      }
+      if (!date || !date.isValid()) return '';
+      return `${date.format('YYYY-MM-DD HH:mm:ss')} (${date.fromNow()})`;
+    }
 
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement
@@ -119,10 +151,44 @@ export default defineComponent({
       })
     }
 
-    const handleRendered = () => {
-      // Wait for the next tick to ensure the DOM is updated
-      setTimeout(addIconsToTransformedFields, 0)
+    function showTooltip(event: MouseEvent, content: string, header = 'Timestamp') {
+      tooltipContent.value = content;
+      tooltipHeader.value = header;
+      tooltipStyle.value = {
+        top: `${event.clientY + 10}px`,
+        left: `${event.clientX + 10}px`
+      };
+      tooltipVisible.value = true;
     }
+    function hideTooltip() {
+      tooltipVisible.value = false;
+    }
+
+    // Render node value for vue-json-pretty
+    function renderNodeValue({ node, defaultValue }: { node: any; defaultValue: any }) {
+      if (isTimestamp(node.value)) {
+        return h(
+          'span',
+          {
+            class: 'timestamp-value',
+            style: 'cursor:pointer; text-decoration:underline;',
+            onMouseenter: (e: MouseEvent) => showTooltip(e, formatTimestamp(node.value), 'Timestamp'),
+            onMouseleave: hideTooltip
+          },
+          defaultValue
+        )
+      }
+      return defaultValue
+    }
+
+    // Patch handleRendered to also add timestamp tooltips
+    let handleRendered = () => {};
+    const originalHandleRendered = handleRendered;
+    const patchedHandleRendered = () => {
+      setTimeout(() => {
+        addIconsToTransformedFields();
+      }, 0);
+    };
 
     // Watch for data changes to update icons
     watch(() => props.data, () => {
@@ -171,8 +237,12 @@ export default defineComponent({
       tooltipVisible,
       tooltipContent,
       tooltipStyle,
-      handleRendered,
-      jsonViewerRef
+      handleRendered: patchedHandleRendered,
+      jsonViewerRef,
+      tooltipHeader,
+      renderNodeValue,
+      showTooltip,
+      hideTooltip
     }
   }
 })

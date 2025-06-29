@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import dayjs from 'dayjs'
 
 type JsonValue = string | number | boolean | null | Record<string, any> | any[]
 
@@ -33,6 +34,10 @@ export function useJsonProcessor() {
     return ratio > 0.8 // If more than 80% of characters are printable, consider it readable
   }
 
+  const isEpochTimestamp = (str: string): boolean => {
+    return /^(\d{10}|\d{13})$/.test(str)
+  }
+
   const tryParseJson = (str: string): JsonValue | null => {
     try {
       return JSON.parse(str)
@@ -42,11 +47,58 @@ export function useJsonProcessor() {
     }
   }
 
-  const processValue = (value: JsonValue, path: string): JsonValue => {
+  const processValue = (value: JsonValue, path: string, parentTransformType?: string): JsonValue => {
+    // Handle number values for epoch detection
+    if (typeof value === 'number') {
+      const strValue = value.toString()
+      if (isEpochTimestamp(strValue)) {
+        let date: dayjs.Dayjs
+        if (strValue.length === 13) {
+          date = dayjs(Number(strValue))
+        } else {
+          date = dayjs(Number(strValue) * 1000)
+        }
+        if (date.isValid()) {
+          const humanReadable = date.format('YYYY-MM-DD HH:mm:ss')
+          // Only add 'Epoch' if not part of a parent transform
+          if (!parentTransformType) {
+            transformedValues.value.push({
+              path,
+              type: 'Epoch',
+              originalValue: strValue
+            })
+          }
+          return humanReadable
+        }
+      }
+      return value
+    }
     if (typeof value !== 'string') return value
     
     console.log(`${path} : [Process] Processing value: ${value.substring(0, 50)}...`)
-    
+
+    // Epoch timestamp transform for string
+    if (isEpochTimestamp(value)) {
+      let date: dayjs.Dayjs
+      if (value.length === 13) {
+        date = dayjs(Number(value))
+      } else {
+        date = dayjs(Number(value) * 1000)
+      }
+      if (date.isValid()) {
+        const humanReadable = date.format('YYYY-MM-DD HH:mm:ss')
+        // Only add 'Epoch' if not part of a parent transform
+        if (!parentTransformType) {
+          transformedValues.value.push({
+            path,
+            type: 'Epoch',
+            originalValue: value
+          })
+        }
+        return humanReadable
+      }
+    }
+
     const parsedJson = tryParseJson(value)
     if (parsedJson) {
       console.log(`${path} : [JSON] Processing`)
@@ -61,37 +113,36 @@ export function useJsonProcessor() {
       }
       return processed
     }
-    
+
     if (isBase64(value)) {
       try {
-        const decoded = atob(value)
+        let decoded = atob(value)
+        decoded = decoded.trim() // Trim whitespace and newlines
         console.log(`${path} : [Base64] Decoded: ${decoded.substring(0, 50)}...`)
-        // Only process if the decoded string is readable text or valid JSON
         if (isReadableText(decoded)) {
-          const parsed = tryParseJson(decoded)
-          if (parsed) {
-            console.log(`${path} : [Base64->JSON] Processing`)
-            const processed = processObject(parsed, path)
-            if (processed && typeof processed === 'object') {
-              originalValues.set(processed, value)
-              transformedValues.value.push({
-                path,
-                type: 'Base64',
-                originalValue: value
-              })
-              console.log(`${path} : [Base64->JSON] Added to transforms`)
+          // Chain all transforms by passing decoded through processValue again
+          const processed = processValue(decoded, path, 'Base64')
+          if (processed !== decoded) {
+            // If a transform occurred, record as Base64->...
+            let type = 'Base64'
+            if (typeof processed === 'string' && isEpochTimestamp(decoded)) {
+              type = 'Base64->Epoch'
+            } else if (typeof processed === 'object') {
+              type = 'Base64->JSON'
             }
-            console.log(`${path} : [Base64->JSON] Processed`)
+            transformedValues.value.push({
+              path,
+              type,
+              originalValue: value
+            })
             return processed
           }
-          console.log(`${path} : [Base64->JSON] Not a json`)
-          // Add to transforms when returning decoded base64
+          // If not transformed, just return decoded
           transformedValues.value.push({
             path,
             type: 'Base64',
             originalValue: value
           })
-          console.log(`${path} : [Base64] Added to transforms`)
           return decoded
         }
         console.log(`${path} : [Base64] Not readable`)
@@ -101,7 +152,7 @@ export function useJsonProcessor() {
         return value
       }
     }
-    
+
     return value
   }
 
@@ -110,7 +161,7 @@ export function useJsonProcessor() {
       console.log(`${parentPath} : [Array] Processing`)
       return obj.map((item, index) => {
         const currentPath = `${parentPath}[${index}]`
-        if (typeof item === 'string') {
+        if (typeof item === 'string' || typeof item === 'number') {
           const processed = processValue(item, currentPath)
           if (processed && typeof processed === 'object') {
             originalValues.set(processed, item)
@@ -126,7 +177,7 @@ export function useJsonProcessor() {
       const result: Record<string, any> = {}
       for (const [key, value] of Object.entries(obj)) {
         const currentPath = parentPath ? `${parentPath}.${key}` : key
-        if (typeof value === 'string') {
+        if (typeof value === 'string' || typeof value === 'number') {
           const processed = processValue(value, currentPath)
           result[key] = processed
           if (processed && typeof processed === 'object') {

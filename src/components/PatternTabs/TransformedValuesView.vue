@@ -1,6 +1,6 @@
 <template>
   <div class="transformed-values-view">
-    <TransformedValuesPanel />
+    <TransformedValuesPanel :transformed-values="[]" />
   </div>
 </template>
 

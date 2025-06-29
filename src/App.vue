@@ -98,12 +98,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
-import { useHistory, type HistoryItem } from './composables/useHistory'
+import { useHistory } from './composables/useHistory'
 import { useTheme } from './composables/useTheme'
-import { usePatternRecognizer } from './composables/patternRecognizer'
-import CustomJsonViewer from './components/CustomJsonViewer.vue'
 import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
 import PatternTabs from './components/PatternTabs/PatternTabs.vue'
 import HistorySidebar from './components/HistorySidebar.vue'
@@ -126,24 +124,6 @@ const {
   transformedValues,
   getOriginalValue
 } = useJsonProcessor()
-
-const { currentPattern, recognizePattern } = usePatternRecognizer()
-
-const hasPattern = computed(() => {
-  if (!parsedJson.value) return false
-  const pattern = recognizePattern(parsedJson.value)
-  return pattern.type !== 'UNKNOWN'
-})
-
-const getJsonPreview = (json: string): string => {
-  try {
-    const parsed = JSON.parse(json)
-    const stringified = JSON.stringify(parsed)
-    return stringified.length > 50 ? stringified.substring(0, 47) + '...' : stringified
-  } catch {
-    return json.length > 50 ? json.substring(0, 47) + '...' : json
-  }
-}
 
 onMounted(() => {
   loadHistory()
@@ -173,26 +153,10 @@ const getThemeTitle = () => {
   return isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'
 }
 
-const getThemeToggleText = computed(() => {
-  return isDarkTheme() ? 'Switch to Light Theme' : 'Switch to Dark Theme'
-})
-
-const loadExample = async (type: string) => {
-  try {
-    const response = await fetch(`/examples/${type}/example1.json`)
-    const json = await response.json()
-    jsonInput.value = json
-    parseJson(json)
-  } catch (error) {
-    console.error('Error loading example:', error)
-  }
-}
-
 const clearInput = () => {
   console.log('Before clear:', {
     jsonInput: jsonInput.value,
     parsedJson: parsedJson.value,
-    hasPattern: hasPattern.value
   });
   
   jsonInput.value = '';
@@ -203,7 +167,6 @@ const clearInput = () => {
   console.log('After clear:', {
     jsonInput: jsonInput.value,
     parsedJson: parsedJson.value,
-    hasPattern: hasPattern.value
   });
 };
 

@@ -46,7 +46,7 @@
       <RawJsonView
         v-if="activeTab === 'RAW'"
         :json="json"
-        :get-original-value="() => undefined"
+        :get-original-value="getOriginalValue"
       />
     </div>
   </div>
@@ -64,7 +64,7 @@ type TabType = PatternType | 'RAW'
 
 const props = defineProps<{
   json: any
-  getOriginalValue: (path: string) => any
+  getOriginalValue: (obj: object) => string | undefined
 }>()
 
 const emit = defineEmits<{
@@ -110,7 +110,6 @@ const handleLoadPayload = (payload: any) => {
 }
 
 // Clipboard logic
-import { nextTick } from 'vue'
 const copied = ref(false)
 const copyJson = async () => {
   try {

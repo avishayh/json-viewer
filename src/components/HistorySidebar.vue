@@ -76,7 +76,7 @@ export default defineComponent({
     }
   },
   emits: ['load', 'remove', 'clear'],
-  setup(props, { emit }) {
+  setup(_, { emit }) {
     const { clearHistory } = useHistory()
 
     const handleLoad = (json: string) => {

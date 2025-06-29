@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 export type PatternType = 'DSSE' | 'SIGSTORE' | 'INTOTO' | 'UNKNOWN'
 
