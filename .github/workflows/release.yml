@@ -51,11 +51,12 @@ jobs:
           mkdir -p releases/${{ steps.get_version.outputs.version }}
           cp -r dist/* releases/${{ steps.get_version.outputs.version }}/
 
-      - name: Commit releases folder
-        run: |
-          git add releases/
-          git commit -m "chore: add release for v${{ steps.get_version.outputs.version }}" || echo "No changes to commit"
-
+      - name: Upload static files as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3 # or specific "vX.X.X" version tag for this action
+        with:
+          path: releases/
+      
       - name: Push releases folder
         run: |
           git push origin master 
