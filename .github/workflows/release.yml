@@ -22,15 +22,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Bump patch version in version.json
-        id: bump_version
+      - name: Calculate next version
+        id: calc_version
         run: |
           VERSION=$(jq -r '.version' version.json)
           IFS='.' read -r major minor patch <<< "$VERSION"
           NEW_PATCH=$((patch + 1))
           NEW_VERSION="$major.$minor.$NEW_PATCH"
-          jq --arg v "$NEW_VERSION" '.version = $v' version.json > tmp.json && mv tmp.json version.json
-          jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Fetch all branches
@@ -38,11 +36,11 @@ jobs:
 
       - name: Create or switch to release branch
         run: |
-          if git ls-remote --exit-code --heads origin releases/v${{ steps.bump_version.outputs.new_version }}; then
-            git checkout releases/v${{ steps.bump_version.outputs.new_version }}
-            git pull origin releases/v${{ steps.bump_version.outputs.new_version }}
+          if git ls-remote --exit-code --heads origin releases/v${{ steps.calc_version.outputs.new_version }}; then
+            git checkout releases/v${{ steps.calc_version.outputs.new_version }}
+            git pull origin releases/v${{ steps.calc_version.outputs.new_version }}
           else
-            git checkout -b releases/v${{ steps.bump_version.outputs.new_version }}
+            git checkout -b releases/v${{ steps.calc_version.outputs.new_version }}
           fi
 
       - name: Set up GitHub token for pushing
@@ -54,14 +52,19 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
+      - name: Bump patch version in version.json
+        run: |
+          jq --arg v "${{ steps.calc_version.outputs.new_version }}" '.version = $v' version.json > tmp.json && mv tmp.json version.json
+          jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
+
       - name: Commit version bump
         run: |
           git add version.json
-          git commit -m "chore: bump version to v${{ steps.bump_version.outputs.new_version }}"
+          git commit -m "chore: bump version to v${{ steps.calc_version.outputs.new_version }}"
 
       - name: Push release branch (version bump)
         run: |
-          git push origin releases/v${{ steps.bump_version.outputs.new_version }}
+          git push origin releases/v${{ steps.calc_version.outputs.new_version }}
 
       - name: Use public npm registry
         run: npm config set registry https://registry.npmjs.org/
@@ -75,8 +78,8 @@ jobs:
       - name: Commit build output
         run: |
           git add dist/
-          git commit -m "chore: add build output for v${{ steps.bump_version.outputs.new_version }}" || echo "No changes to commit"
+          git commit -m "chore: add build output for v${{ steps.calc_version.outputs.new_version }}" || echo "No changes to commit"
 
       - name: Push build output
         run: |
-          git push origin releases/v${{ steps.bump_version.outputs.new_version }} 
+          git push origin releases/v${{ steps.calc_version.outputs.new_version }} 
