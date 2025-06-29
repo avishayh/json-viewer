@@ -1,0 +1,61 @@
+name: Release Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Bump patch version in version.json
+        id: bump_version
+        run: |
+          VERSION=$(jq -r '.version' version.json)
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          NEW_PATCH=$((patch + 1))
+          NEW_VERSION="$major.$minor.$NEW_PATCH"
+          jq --arg v "$NEW_VERSION" '.version = $v' version.json > tmp.json && mv tmp.json version.json
+          jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create release branch
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b releases/v${{ steps.bump_version.outputs.new_version }}
+
+      - name: Commit version bump
+        run: |
+          git add version.json
+          git commit -m "chore: bump version to v${{ steps.bump_version.outputs.new_version }}"
+
+      - name: Push release branch (version bump)
+        run: |
+          git push origin releases/v${{ steps.bump_version.outputs.new_version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Commit build output
+        run: |
+          git add dist/
+          git commit -m "chore: add build output for v${{ steps.bump_version.outputs.new_version }}" || echo "No changes to commit"
+
+      - name: Push build output
+        run: |
+          git push origin releases/v${{ steps.bump_version.outputs.new_version }} 
