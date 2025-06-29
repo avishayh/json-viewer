@@ -59,6 +59,7 @@ jobs:
 
       - name: Commit version bump
         run: |
+          ls -la
           git add version.json
           git commit -m "chore: bump version to v${{ steps.calc_version.outputs.new_version }}"
 
