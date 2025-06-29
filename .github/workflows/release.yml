@@ -22,6 +22,17 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Bump patch version in version.json
+        id: bump_version
+        run: |
+          VERSION=$(jq -r '.version' version.json)
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          NEW_PATCH=$((patch + 1))
+          NEW_VERSION="$major.$minor.$NEW_PATCH"
+          jq --arg v "$NEW_VERSION" '.version = $v' version.json > tmp.json && mv tmp.json version.json
+          jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
       - name: Fetch all branches
         run: git fetch --all
 
@@ -37,17 +48,6 @@ jobs:
       - name: Set up GitHub token for pushing
         run: |
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-
-      - name: Bump patch version in version.json
-        id: bump_version
-        run: |
-          VERSION=$(jq -r '.version' version.json)
-          IFS='.' read -r major minor patch <<< "$VERSION"
-          NEW_PATCH=$((patch + 1))
-          NEW_VERSION="$major.$minor.$NEW_PATCH"
-          jq --arg v "$NEW_VERSION" '.version = $v' version.json > tmp.json && mv tmp.json version.json
-          jq --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.lastUpdated = $d' version.json > tmp.json && mv tmp.json version.json
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Set git user
         run: |
