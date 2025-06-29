@@ -66,8 +66,14 @@ jobs:
         run: |
           git push origin releases/v${{ steps.calc_version.outputs.new_version }}
 
+      - name: Show effective npm registry before cleanup
+        run: npm config get registry
+
       - name: Use public npm registry
         run: npm config set registry https://registry.npmjs.org/
+
+      - name: Show effective npm registry after cleanup
+        run: npm config get registry
 
       - name: Install dependencies
         run: npm install
