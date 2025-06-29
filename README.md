@@ -71,7 +71,7 @@ The project maintains version information in `version.json`, which tracks:
 
 ## License
 
-[Add your license information here]
+This project is licensed under the [Apache License 2.0](LICENSE).
 
 ## Contributing
 
