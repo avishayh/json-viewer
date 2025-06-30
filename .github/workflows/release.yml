@@ -22,41 +22,27 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Set up GitHub token for pushing
+      - name: Build with npm
         run: |
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-
-      - name: Set git user
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-      - name: Use public npm registry
-        run: npm config set registry https://registry.npmjs.org/
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Get version from package.json
-        id: get_version
-        run: |
+          npm config set registry https://registry.npmjs.org/
+          npm install
           VERSION=$(jq -r .version package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          npm run build
 
-      - name: Build project
-        run: npm run build
-
-      - name: Copy build output to releases/version folder
+      - name: Prepare Git for release
         run: |
-          mkdir -p releases/${{ steps.get_version.outputs.version }}
-          cp -r dist/* releases/${{ steps.get_version.outputs.version }}/
-
-      - name: Upload static files as artifact
-        id: deployment
-        uses: actions/upload-pages-artifact@v3 # or specific "vX.X.X" version tag for this action
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+  
+     
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: releases/
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist # This should match your build output directory
+          # If you are using a custom domain and want to generate a CNAME file
+          # cname: example.com
       
-      - name: Push releases folder
-        run: |
-          git push origin master 
+      
