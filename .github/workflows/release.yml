@@ -36,13 +36,17 @@ jobs:
       #     git config user.name "github-actions"
       #     git config user.email "github-actions@github.com"
   
-     
+      - name: Prepare tag
+        id: prepare_tag
+        run: |
+          echo "DEPLOY_TAG_NAME=deploy-${TAG_NAME}" >> "${GITHUB_OUTPUT}"
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
+          if: github.ref == 'refs/heads/master'
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist # This should match your build output directory
-          # If you are using a custom domain and want to generate a CNAME file
-          # cname: example.com
-      
+          publish_dir: ./dist
+          tag_name: ${{ steps.prepare_tag.outputs.DEPLOY_TAG_NAME }}
+          tag_message: 'Deployment ${{ github.ref_name }}'
       
