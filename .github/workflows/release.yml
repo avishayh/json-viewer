@@ -30,11 +30,11 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           npm run build
 
-      - name: Prepare Git for release
-        run: |
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+      # - name: Prepare Git for release
+      #   run: |
+      #     git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+      #     git config user.name "github-actions"
+      #     git config user.email "github-actions@github.com"
   
      
       - name: Deploy to GitHub Pages
