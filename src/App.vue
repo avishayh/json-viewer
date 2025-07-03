@@ -125,7 +125,7 @@ const {
 
 onMounted(() => {
   loadHistory()
-  fetch('/version.json')
+  fetch('version.json')
     .then(res => res.json())
     .then(data => {
       version.value = data.version || null
