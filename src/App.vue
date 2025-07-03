@@ -41,8 +41,8 @@
               <div v-if="showAbout" class="about-popup">
                 <div class="about-content">
                   <h3>About</h3>
-                  <p>Version: {{ version }}</p>
-                  <p>Last updated: {{ lastUpdated }}</p>
+                  <p v-if="version">Version: {{ version }}</p>
+                  <p v-else>Loading version...</p>
                 </div>
               </div>
             </div>
@@ -106,13 +106,11 @@ import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
 import PatternTabs from './components/PatternTabs/PatternTabs.vue'
 import HistorySidebar from './components/HistorySidebar.vue'
 import ExampleButtons from './components/ExampleButtons.vue'
-import versionInfo from '../version.json'
 
 const jsonInput = ref('')
 const highlightedPath = ref<string | undefined>(undefined)
 const showAbout = ref(false)
-const version = versionInfo.version
-const lastUpdated = new Date(versionInfo.lastUpdated).toLocaleString()
+const version = ref<string | null>(null)
 
 const { toggleTheme, isDarkTheme } = useTheme()
 const { history, loadHistory, addToHistory, removeFromHistory, clearHistory, getPreview, formatTimestamp, getHistoryTitle } = useHistory()
@@ -127,6 +125,14 @@ const {
 
 onMounted(() => {
   loadHistory()
+  fetch('/version.json')
+    .then(res => res.json())
+    .then(data => {
+      version.value = data.version || null
+    })
+    .catch(() => {
+      version.value = null
+    })
 })
 
 const handleParseJson = () => {
