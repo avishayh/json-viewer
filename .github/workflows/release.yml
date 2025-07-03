@@ -30,23 +30,44 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           npm run build
 
-      # - name: Prepare Git for release
-      #   run: |
-      #     git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-      #     git config user.name "github-actions"
-      #     git config user.email "github-actions@github.com"
-  
-      - name: Prepare tag
-        id: prepare_tag
+      - name: Prepare and deploy to gh-pages
         run: |
-          echo "DEPLOY_TAG_NAME=deploy-${TAG_NAME}" >> "${GITHUB_OUTPUT}"
+          set -e
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
+          # Clone gh-pages branch into temp dir
+          git clone --branch gh-pages --single-branch "$REPO_URL" gh-pages
+          cd gh-pages
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          if: github.ref == 'refs/heads/master'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          tag_name: ${{ steps.prepare_tag.outputs.DEPLOY_TAG_NAME }}
-          tag_message: 'Deployment ${{ github.ref_name }}'
+          # Read and increment version
+          if [ -f version.json ]; then
+            VERSION=$(jq -r .version version.json)
+            NEW_VERSION=$((VERSION + 1))
+          else
+            NEW_VERSION=1
+          fi
+          echo "New version: $NEW_VERSION"
+
+          # Backup /latest to /v/{version}
+          if [ -d latest ]; then
+            mkdir -p v/$NEW_VERSION
+            rm -rf v/$NEW_VERSION/*
+            cp -r latest/* v/$NEW_VERSION/
+          fi
+
+          # Copy new dist to /latest
+          rm -rf latest
+          mkdir latest
+          cp -r ../dist/* latest/
+
+          # Update version.json
+          echo "{\"version\": \"$NEW_VERSION\"}" > version.json
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Release $NEW_VERSION" || echo "No changes to commit"
+          git push origin gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
