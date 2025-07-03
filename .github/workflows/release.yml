@@ -49,11 +49,11 @@ jobs:
           fi
           echo "New version: $NEW_VERSION"
 
-          # Backup /latest to /v/{version} (including version.json)
+          # Backup /latest to /v/{version} 
           if [ -d latest ]; then
-            mkdir -p v/$NEW_VERSION
-            rm -rf v/$NEW_VERSION/*
-            cp -r latest/* v/$NEW_VERSION/
+            mkdir -p v/$VERSION
+            rm -rf v/$VERSION/*
+            cp -r latest/* v/$VERSION/
           fi
 
           # Copy new dist to /latest
