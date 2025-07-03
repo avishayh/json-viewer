@@ -41,12 +41,12 @@ jobs:
           cd gh-pages
 
           # Read and increment version
-          if [ -f version.json ]; then
-            VERSION=$(jq -r .version version.json)
-            NEW_VERSION=$((VERSION + 1))
-          else
-            NEW_VERSION=1
-          fi
+          VERSION=$(jq -r .version latest/version.json)
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          NEW_MINOR=$((MINOR + 1))
+          NEW_VERSION="${MAJOR}.${NEW_MINOR}"
+                    
           echo "New version: $NEW_VERSION"
 
           # Backup /latest to /v/{version} 
@@ -61,11 +61,8 @@ jobs:
           mkdir latest
           cp -r ../dist/* latest/
 
-          # Update version.json in root
-          echo "{\"version\": \"$NEW_VERSION\"}" > version.json
-
-          # Copy version.json to /latest
-          cp version.json latest/version.json
+          # Update version.json in latest folder to new version
+          echo "{\"version\": \"$NEW_VERSION\"}" > latest/version.json
 
           # Commit and push
           git config user.name "github-actions[bot]"
