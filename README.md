@@ -20,6 +20,7 @@ A modern web-based JSON viewer built with Vite and TypeScript that provides an i
 
 ## Use Cases
 
+
 This viewer is particularly useful for:
 - Viewing and validating DSSE envelopes
 - Working with In-toto attestations and metadata
