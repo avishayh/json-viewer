@@ -16,6 +16,29 @@
         </div>
         <div class="header-actions">
           <div class="action-buttons">
+            <div class="examples-dropdown" @click="showExamples = !showExamples">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10,9 9,9 8,9"></polyline>
+              </svg>
+              <div v-if="showExamples" class="examples-popup">
+                <div class="examples-content">
+                  <h3>Load Examples</h3>
+                  <button
+                    v-for="example in examples"
+                    :key="example.name"
+                    @click="handleExampleLoad(JSON.stringify(example.data)); showExamples = false"
+                    class="example-menu-button"
+                    :title="`Load ${example.name} example`"
+                  >
+                    {{ example.name.toUpperCase() }}
+                  </button>
+                </div>
+              </div>
+            </div>
             <button class="theme-toggle" @click="toggleTheme" :title="getThemeTitle()">
               <svg v-if="isDarkTheme()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="5"></circle>
@@ -58,7 +81,6 @@
             rows="4"
           ></textarea>
           <div class="controls-row">
-            <ExampleButtons @load-example="handleExampleLoad" />
             <div class="button-group">
               <button @click="handleParseJson" :disabled="!jsonInput.trim()" class="parse-button">
                 Parse JSON
@@ -98,19 +120,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
 import { useHistory } from './composables/useHistory'
 import { useTheme } from './composables/useTheme'
 import TransformedValuesPanel from './components/TransformedValuesPanel.vue'
 import PatternTabs from './components/PatternTabs/PatternTabs.vue'
 import HistorySidebar from './components/HistorySidebar.vue'
-import ExampleButtons from './components/ExampleButtons.vue'
+import dsseExample from './examples/dsse.json'
+import sigstoreExample from './examples/sigstore.json'
+import intotoExample from './examples/intoto.json'
+
+interface Example {
+  name: string
+  data: any
+}
 
 const jsonInput = ref('')
 const highlightedPath = ref<string | undefined>(undefined)
 const showAbout = ref(false)
+const showExamples = ref(false)
 const version = ref<string | null>(null)
+
+const examples = ref<Example[]>([
+  { name: 'dsse', data: dsseExample },
+  { name: 'sigstore', data: sigstoreExample },
+  { name: 'intoto', data: intotoExample }
+])
 
 const { toggleTheme, isDarkTheme } = useTheme()
 const { history, loadHistory, addToHistory, removeFromHistory, clearHistory, getPreview, formatTimestamp, getHistoryTitle } = useHistory()
@@ -133,7 +169,28 @@ onMounted(() => {
     .catch(() => {
       version.value = null
     })
+    
+  // Add click outside handler to close popups
+  document.addEventListener('click', handleClickOutside)
 })
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  
+  // Check if click is outside examples dropdown
+  if (!target.closest('.examples-dropdown')) {
+    showExamples.value = false
+  }
+  
+  // Check if click is outside about popup
+  if (!target.closest('.about-icon')) {
+    showAbout.value = false
+  }
+}
 
 const handleParseJson = () => {
   if (parseJson(jsonInput.value)) {
@@ -195,6 +252,7 @@ const handleLoadPayload = async (payload: string) => {
   --border-color: #e2e8f0;
   --error-color: #ef4444;
   --error-bg: #fef2f2;
+  --bg-hover: #f1f5f9;
 }
 
 [data-theme="dark"] {
@@ -207,6 +265,7 @@ const handleLoadPayload = async (payload: string) => {
   --border-color: #44475a;
   --error-color: #ff5555;
   --error-bg: #2d1e1e;
+  --bg-hover: #44475a;
 }
 
 * {
@@ -301,11 +360,11 @@ body {
   top: 100%;
   right: 0;
   margin-top: 0.5rem;
-  background-color: var(--bg-primary);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
 }
 
 .about-content {
@@ -313,46 +372,112 @@ body {
   min-width: 200px;
 }
 
-.about-content h3 {
-  margin: 0 0 0.5rem 0;
+.examples-dropdown {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.examples-dropdown:hover {
+  background-color: var(--bg-hover);
+}
+
+.examples-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.examples-content {
+  padding: 1rem;
+  min-width: 200px;
+}
+
+.examples-content h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.about-content p {
-  margin: 0.25rem 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+.example-menu-button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.example-menu-button:last-child {
+  margin-bottom: 0;
+}
+
+.example-menu-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.example-menu-button:active {
+  transform: translateY(0);
 }
 
 .input-section {
   padding: 1rem;
-  background-color: var(--bg-primary);
+  background-color: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
 }
 
 .input-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
-textarea {
+.input-controls textarea {
   width: 100%;
+  min-height: 100px;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  background-color: var(--surface-color);
   color: var(--text-primary);
-  font-family: monospace;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
   resize: vertical;
-  min-height: 100px;
+  transition: border-color 0.2s;
+}
+
+.input-controls textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
 }
 
 .controls-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
 }
 
 .button-group {
@@ -360,56 +485,55 @@ textarea {
   gap: 0.5rem;
 }
 
-button {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+.parse-button,
+.clear-button {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.2s;
-}
-
-button:hover:not(:disabled) {
-  background-color: var(--bg-hover);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .parse-button {
   background-color: var(--primary-color);
   color: white;
-  border: none;
 }
 
 .parse-button:hover:not(:disabled) {
   background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.parse-button:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  color: var(--text-secondary);
 }
 
 .clear-button {
-  background-color: #dc2626;
-  color: white;
-  border: none;
+  background-color: var(--surface-color);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .clear-button:hover:not(:disabled) {
-  background-color: #ef4444;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
 .clear-button:disabled {
-  background-color: #9ca3af;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .error {
   color: var(--error-color);
-  margin-bottom: 1rem;
+  margin: 1rem;
   padding: 1rem;
   background-color: var(--error-bg);
   border-radius: 8px;
@@ -420,6 +544,7 @@ button:disabled {
 .content-wrapper {
   display: flex;
   gap: 1rem;
+  padding: 1rem;
   height: calc(100vh - 300px);
 }
 
@@ -431,10 +556,125 @@ button:disabled {
   border: 1px solid var(--border-color);
 }
 
-h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--text-color);
+.input-section {
+  padding: 1rem;
+  background-color: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.input-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.input-controls textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.input-controls textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-controls textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.controls-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.parse-button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.parse-button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.parse-button:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
+
+.clear-button {
+  padding: 0.5rem;
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.clear-button:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.clear-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--error-color);
+  margin: 1rem;
+  padding: 1rem;
+  background-color: var(--error-bg);
+  border-radius: 8px;
+  border: 1px solid var(--error-color);
+  font-size: 0.875rem;
+}
+
+.content-wrapper {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  height: calc(100vh - 300px);
+}
+
+.json-section {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 /* Custom scrollbar */
@@ -455,112 +695,4 @@ h1 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
-
-.about-icon {
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-  position: relative;
-}
-
-.about-icon:hover {
-  color: var(--primary-color);
-}
-
-.about-popup {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
-  min-width: 200px;
-  z-index: 1000;
-}
-
-.about-content h3 {
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
-}
-
-.about-content p {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
-}
-
-.examples {
-  margin-top: 2.5rem;
-  padding: 1rem;
-  background-color: var(--surface-color);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-}
-
-.example-buttons {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.example-buttons button {
-  padding: 0.75rem 1rem;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s, transform 0.1s;
-}
-
-.example-buttons button:hover:not(:disabled) {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-.example-buttons button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.example-buttons button:disabled {
-  background-color: var(--border-color);
-  cursor: not-allowed;
-  color: var(--text-secondary);
-}
-
-.history-panel {
-  width: 250px;
-  background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.history-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 48px;
-  box-sizing: border-box;
-}
-
-.history-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.history-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem;
-}
-</style> 
+</style>
