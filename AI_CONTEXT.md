@@ -133,6 +133,14 @@ src/
 4. Team collaboration features needed
 5. Additional security attestation formats to support
 
+## User Instructions & Preferences
+⚠️ **IMPORTANT**: Every time the user asks for a new feature, document the request in the `/tasks/` folder with:
+- Feature request details
+- Implementation requirements
+- Status tracking
+- Files modified
+- Testing notes
+
 ## Development Environment
 - Node.js + npm
 - Vite dev server with HMR
