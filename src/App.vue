@@ -130,6 +130,7 @@ import HistorySidebar from './components/HistorySidebar.vue'
 import dsseExample from './examples/dsse.json'
 import sigstoreExample from './examples/sigstore.json'
 import intotoExample from './examples/intoto.json'
+import transformationsExample from './examples/transformations.json'
 
 interface Example {
   name: string
@@ -145,7 +146,8 @@ const version = ref<string | null>(null)
 const examples = ref<Example[]>([
   { name: 'dsse', data: dsseExample },
   { name: 'sigstore', data: sigstoreExample },
-  { name: 'intoto', data: intotoExample }
+  { name: 'intoto', data: intotoExample },
+  { name: 'transformations', data: transformationsExample }
 ])
 
 const { toggleTheme, isDarkTheme } = useTheme()
