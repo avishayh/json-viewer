@@ -1,4 +1,4 @@
-import { compress, compressToBase64, compressToEncodedURIComponent, compressToUTF16, decompress, decompressFromBase64, decompressFromEncodedURIComponent } from 'lz-string'
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 
 // Utility for copying text to clipboard
 export function copyToClipboard(text: string): Promise<void> {
