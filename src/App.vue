@@ -232,11 +232,20 @@ const {
 
 
 onMounted(() => {
+
   loadHistory()
+  // Version check for cache busting
   fetch('version.json')
     .then(res => res.json())
     .then(data => {
       version.value = data.version || null
+      const prevVersion = localStorage.getItem('app_version')
+      if (prevVersion && prevVersion !== data.version) {
+        localStorage.setItem('app_version', data.version)
+        window.location.reload()
+      } else {
+        localStorage.setItem('app_version', data.version)
+      }
     })
     .catch(() => {
       version.value = null
