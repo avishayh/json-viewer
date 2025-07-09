@@ -1,3 +1,27 @@
+/* Share link button styles */
+.share-link-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+.share-link-button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+.share-link-button:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
 <template>
   <div class="app-container">
     <HistorySidebar
@@ -82,10 +106,13 @@
           ></textarea>
           <div class="controls-row">
             <div class="button-group">
-              <button @click="handleParseJson" :disabled="!jsonInput.trim()" class="parse-button">
+              <button @click="handleParseJson" :disabled="!safeJsonInput.trim()" class="parse-button">
                 Parse JSON
               </button>
-              <button @click="clearInput" :disabled="!jsonInput.trim()" class="clear-button" title="Clear input">
+              <button @click="handleShareLink" :title="shareButtonTitle" class="icon-button share-url-btn" :disabled="!safeJsonInput.trim()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+              </button>
+              <button @click="clearInput" :disabled="!safeJsonInput.trim()" class="clear-button" title="Clear input">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 6h18"></path>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
@@ -93,6 +120,13 @@
                 </svg>
               </button>
             </div>
+            <transition name="fade">
+              <div v-if="shareStatus === 'copied' || shareStatus === 'shortened' || shareStatus === 'toolong'" class="share-copied-msg">
+                <span v-if="shareStatus === 'copied'">Link copied!</span>
+                <span v-else-if="shareStatus === 'shortened'">Shortened link copied!</span>
+                <span v-else-if="shareStatus === 'toolong'">JSON too large to share as URL</span>
+              </div>
+            </transition>
           </div>
         </div>
       </div>
@@ -120,6 +154,41 @@
 </template>
 
 <script setup lang="ts">
+import { copyToClipboard, compressJsonForUrl, decompressJsonFromUrl, isCompressedUrlTooLong } from './composables/useClipboardAndShortUrl'
+import { computed } from 'vue'
+const shareStatus = ref<'idle' | 'copied' | 'shortened' | 'error' | 'toolong'>('idle')
+const shareButtonTitle = computed(() => {
+  if (shareStatus.value === 'copied') return 'Link copied to clipboard!'
+  if (shareStatus.value === 'shortened') return 'Shortened link copied!'
+  if (shareStatus.value === 'error') return 'Error copying link'
+  return 'Copy shareable link to clipboard'
+})
+
+// Defensive: avoid errors if jsonInput is null
+const safeJsonInput = computed(() => jsonInput.value || '')
+
+
+async function handleShareLink() {
+  shareStatus.value = 'idle'
+  try {
+    if (isCompressedUrlTooLong(jsonInput.value)) {
+      shareStatus.value = 'toolong'
+      setTimeout(() => shareStatus.value = 'idle', 2000)
+      return
+    }
+    // Compress JSON for URL
+    const compressed = compressJsonForUrl(jsonInput.value)
+    const baseUrl = window.location.origin + window.location.pathname
+    const url = `${baseUrl}?json=${compressed}`
+    await copyToClipboard(url)
+    shareStatus.value = 'copied'
+    setTimeout(() => shareStatus.value = 'idle', 2000)
+  } catch (err) {
+    shareStatus.value = 'error'
+    setTimeout(() => shareStatus.value = 'idle', 2000)
+    console.error('Share link error:', err)
+  }
+}
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
 import { useHistory } from './composables/useHistory'
@@ -161,6 +230,7 @@ const {
   getOriginalValue
 } = useJsonProcessor()
 
+
 onMounted(() => {
   loadHistory()
   fetch('version.json')
@@ -171,9 +241,23 @@ onMounted(() => {
     .catch(() => {
       version.value = null
     })
-    
+
   // Add click outside handler to close popups
   document.addEventListener('click', handleClickOutside)
+
+  // Check for ?json= param and load if present
+  const params = new URLSearchParams(window.location.search)
+  const jsonParam = params.get('json')
+  if (jsonParam) {
+    try {
+      const decoded = decompressJsonFromUrl(jsonParam)
+      jsonInput.value = decoded
+      parseJson(decoded)
+    } catch (err) {
+      // ignore
+      console.error('Decompression error:', err)
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -679,6 +763,44 @@ body {
   border: 1px solid var(--border-color);
 }
 
+/* Icon button for share url */
+.icon-button.share-url-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+.icon-button.share-url-btn:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  color: var(--primary-hover);
+}
+.icon-button.share-url-btn:disabled {
+  color: var(--border-color);
+  cursor: not-allowed;
+}
+
+.share-copied-msg {
+  margin-left: 1rem;
+  color: var(--primary-color);
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -696,5 +818,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
+}
+
+.share-url-warning {
+  color: var(--error-color);
+  font-size: 0.95rem;
+  margin-left: 1rem;
+  font-weight: 500;
 }
 </style>
