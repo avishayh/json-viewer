@@ -1,6 +1,12 @@
 <template>
   <div class="transformed-values-panel">
-    <h3>Transformed Values</h3>
+    <h3 class="transformed-title">
+      Transformed Values
+      <label class="modern-toggle">
+        <input type="checkbox" :checked="transformEnabled" @change="$emit('toggle-transform', !transformEnabled)" />
+        <span class="slider"></span>
+      </label>
+    </h3>
     <div class="values-list">
       <div
         v-for="(item, index) in transformedValues"
@@ -44,6 +50,10 @@ export default defineComponent({
         type: string;
         originalValue: string;
       }>>,
+      required: true
+    },
+    transformEnabled: {
+      type: Boolean,
       required: true
     }
   },
@@ -94,6 +104,46 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.modern-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-left: 0.75rem;
+  user-select: none;
+  height: 24px;
+}
+.modern-toggle input[type="checkbox"] {
+  display: none;
+}
+.modern-toggle .slider {
+  width: 40px;
+  height: 22px;
+  background: var(--border-color);
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: inline-block;
+}
+.modern-toggle .slider:before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  background: var(--surface-color);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+.modern-toggle input[type="checkbox"]:checked + .slider {
+  background: var(--primary-color);
+}
+.modern-toggle input[type="checkbox"]:checked + .slider:before {
+  transform: translateX(18px);
+  background: var(--primary-color);
+}
 .transformed-values-panel {
   width: 350px;
   min-width: 350px;
@@ -110,6 +160,9 @@ export default defineComponent({
   color: var(--text-primary);
   font-size: 1.1rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .values-list {

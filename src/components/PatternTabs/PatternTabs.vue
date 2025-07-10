@@ -54,6 +54,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+const props = defineProps<{
+  json: any
+  getOriginalValue: (obj: object) => string | undefined
+  transformEnabled: boolean
+}>()
+const emit = defineEmits<{
+  (e: 'load-payload', payload: any): void
+  (e: 'toggle-transform', enabled: boolean): void
+}>()
 import { usePatternRecognizer, type PatternType } from '../../composables/patternRecognizer'
 import DsseView from './DsseView.vue'
 import SigstoreView from './SigstoreView.vue'
@@ -61,15 +70,6 @@ import InTotoView from './InTotoView.vue'
 import RawJsonView from './RawJsonView.vue'
 
 type TabType = PatternType | 'RAW'
-
-const props = defineProps<{
-  json: any
-  getOriginalValue: (obj: object) => string | undefined
-}>()
-
-const emit = defineEmits<{
-  (e: 'load-payload', payload: any): void
-}>()
 
 const { currentPattern, recognizePattern } = usePatternRecognizer()
 
@@ -125,6 +125,7 @@ const copyJson = async () => {
 </script>
 
 <style scoped>
+
 .pattern-tabs {
   display: flex;
   flex-direction: column;

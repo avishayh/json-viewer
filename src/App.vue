@@ -141,12 +141,16 @@
             :json="parsedJson"
             :highlight-path="highlightedPath"
             :get-original-value="getOriginalValue"
+            :transform-enabled="transformEnabled"
             @load-payload="handleLoadPayload"
+            @toggle-transform="handleTransformToggle"
           />
         </div>
         <TransformedValuesPanel
           :transformed-values="transformedValues"
+          :transform-enabled="transformEnabled"
           @select-path="handlePathSelect"
+          @toggle-transform="handleTransformToggle"
         />
       </div>
     </div>
@@ -222,13 +226,27 @@ const examples = ref<Example[]>([
 const { toggleTheme, isDarkTheme } = useTheme()
 const { history, loadHistory, addToHistory, removeFromHistory, clearHistory, getPreview, formatTimestamp, getHistoryTitle } = useHistory()
 
+// Transformation toggle state for the app
+const transformKey = 'json_viewer_transform_enabled'
+const transformEnabled = ref(true)
+if (localStorage.getItem(transformKey) !== null) {
+  transformEnabled.value = localStorage.getItem(transformKey) === 'true'
+}
+function handleTransformToggle(val: boolean) {
+  transformEnabled.value = val
+  // Persist to localStorage
+  localStorage.setItem(transformKey, String(val))
+  // Re-parse JSON to update view
+  parseJson(jsonInput.value)
+}
+
 const {
   parsedJson,
   error,
   parseJson,
   transformedValues,
   getOriginalValue
-} = useJsonProcessor()
+} = useJsonProcessor(transformEnabled)
 
 
 onMounted(() => {

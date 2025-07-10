@@ -9,8 +9,10 @@ export interface TransformedValue {
   originalValue: string
 }
 
-export function useJsonProcessor() {
+import { Ref } from 'vue'
+export function useJsonProcessor(transformEnabled?: Ref<boolean>) {
   const parsedJson = ref<JsonValue | null>(null)
+  const rawJson = ref<JsonValue | null>(null)
   const error = ref('')
   const lastParsedJson = ref('')
   const originalValues = new WeakMap<object, string>()
@@ -48,6 +50,9 @@ export function useJsonProcessor() {
   }
 
   const processValue = (value: JsonValue, path: string, parentTransformType?: string): JsonValue => {
+    if (transformEnabled && !transformEnabled.value) {
+      return value
+    }
     // Handle number values for epoch detection
     if (typeof value === 'number') {
       const strValue = value.toString()
@@ -201,27 +206,29 @@ export function useJsonProcessor() {
     try {
       error.value = ''
       transformedValues.value = []
-      
       // If input is empty, reset state and return
       if (!jsonInput.trim()) {
         parsedJson.value = null
+        rawJson.value = null
         lastParsedJson.value = ''
         return true
       }
-      
       const jsonData = JSON.parse(jsonInput)
+      rawJson.value = jsonData
       parsedJson.value = processObject(jsonData)
       lastParsedJson.value = jsonInput
       return true
     } catch (err) {
       error.value = 'Invalid JSON format'
       parsedJson.value = null
+      rawJson.value = null
       return false
     }
   }
 
   return {
     parsedJson,
+    rawJson,
     error,
     lastParsedJson,
     parseJson,
