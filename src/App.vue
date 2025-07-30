@@ -139,6 +139,7 @@
         <div class="json-section">
           <PatternTabs 
             :json="parsedJson"
+            :raw-json="rawJson"
             :highlight-path="highlightedPath"
             :get-original-value="getOriginalValue"
             :transform-enabled="transformEnabled"
@@ -242,6 +243,7 @@ function handleTransformToggle(val: boolean) {
 
 const {
   parsedJson,
+  rawJson,
   error,
   parseJson,
   transformedValues,

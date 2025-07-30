@@ -56,6 +56,7 @@
 import { ref, computed, watch } from 'vue'
 const props = defineProps<{
   json: any
+  rawJson: any
   getOriginalValue: (obj: object) => string | undefined
   transformEnabled: boolean
 }>()
@@ -74,6 +75,7 @@ type TabType = PatternType | 'RAW'
 const { currentPattern, recognizePattern } = usePatternRecognizer()
 
 const activeTab = ref<TabType>('UNKNOWN')
+const lastRawJsonString = ref<string>('')
 
 const availableTabs = computed(() => {
   const tabs: TabType[] = ['RAW']
@@ -85,17 +87,25 @@ const availableTabs = computed(() => {
 
 const patternInfo = computed(() => currentPattern.value)
 
-watch(() => props.json, (newJson) => {
-  if (newJson) {
-    const pattern = recognizePattern(newJson)
-    // If pattern is UNKNOWN, default to RAW tab
-    if (pattern.type === 'UNKNOWN') {
-      activeTab.value = 'RAW'
-    } else {
-      activeTab.value = pattern.type
+watch(() => props.rawJson, (newRawJson) => {
+  if (newRawJson) {
+    const newRawJsonString = JSON.stringify(newRawJson)
+    const isNewJson = newRawJsonString !== lastRawJsonString.value
+    
+    if (isNewJson) {
+      // Only auto-switch tabs for genuinely new JSON
+      const pattern = recognizePattern(newRawJson)
+      if (pattern.type === 'UNKNOWN') {
+        activeTab.value = 'RAW'
+      } else {
+        activeTab.value = pattern.type
+      }
+      lastRawJsonString.value = newRawJsonString
     }
+    // If it's the same JSON (just transform toggle), keep current tab
   } else {
     activeTab.value = 'UNKNOWN'
+    lastRawJsonString.value = ''
   }
 }, { immediate: true })
 
