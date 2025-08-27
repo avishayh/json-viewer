@@ -88,8 +88,6 @@
               <div v-if="showAbout" class="about-popup">
                 <div class="about-content">
                   <h3>About</h3>
-                  <p v-if="version">Version: {{ version }}</p>
-                  <p v-else>Loading version...</p>
                   
                   <!-- Version Navigation -->
                   <div v-if="!isDev" class="version-navigation">
@@ -126,10 +124,7 @@
                       </a>
                     </div>
                     
-                    <!-- Debug info (temporary) -->
-                    <div v-if="!isDev" style="font-size: 10px; color: #999; margin-top: 8px;">
-                      Debug: latest={{ latestVersion }}, current={{ currentVersion }}, showLatest={{ latestVersion && currentVersion && currentVersion !== latestVersion }}
-                    </div>
+
                     
 
                   </div>
