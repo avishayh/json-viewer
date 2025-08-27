@@ -527,8 +527,8 @@ const handleLoadPayload = async (payload: string) => {
   --error-color: #ef4444;
   --error-bg: #fef2f2;
   --bg-hover: #f1f5f9;
-  --success-color: #10b981;
-  --success-hover: #059669;
+  --success-color: #34d399;
+  --success-hover: #10b981;
   --bg-secondary: #f8fafc;
 }
 
@@ -543,8 +543,8 @@ const handleLoadPayload = async (payload: string) => {
   --error-color: #ff5555;
   --error-bg: #2d1e1e;
   --bg-hover: #44475a;
-  --success-color: #50fa7b;
-  --success-hover: #69ff94;
+  --success-color: #4ade80;
+  --success-hover: #22c55e;
   --bg-secondary: #1e1f29;
 }
 
