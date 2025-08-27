@@ -90,6 +90,29 @@
                   <h3>About</h3>
                   <p v-if="version">Version: {{ version }}</p>
                   <p v-else>Loading version...</p>
+                  
+                  <!-- Version Navigation -->
+                  <div v-if="latestVersion" class="version-navigation">
+                    <div v-if="!isOnLatestVersion" class="version-links">
+                      <p class="version-info">You're viewing an older version</p>
+                      <a :href="getLatestUrl()" class="version-link latest-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="9,11 12,14 22,4"></polyline>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        Go to Latest ({{ latestVersion }})
+                      </a>
+                    </div>
+                    
+                    <div v-if="previousVersion" class="version-links">
+                      <a :href="getVersionUrl(previousVersion)" class="version-link previous-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="15,18 9,12 15,6"></polyline>
+                        </svg>
+                        Previous Version ({{ previousVersion }})
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -159,8 +182,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { copyToClipboard, compressJsonForUrl, decompressJsonFromUrl, isCompressedUrlTooLong } from './composables/useClipboardAndShortUrl'
-import { computed } from 'vue'
+
 const shareStatus = ref<'idle' | 'copied' | 'shortened' | 'error' | 'toolong'>('idle')
 const shareButtonTitle = computed(() => {
   if (shareStatus.value === 'copied') return 'Link copied to clipboard!'
@@ -194,7 +218,6 @@ async function handleShareLink() {
     console.error('Share link error:', err)
   }
 }
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useJsonProcessor } from './composables/useJsonProcessor'
 import { useHistory } from './composables/useHistory'
 import { useTheme } from './composables/useTheme'
@@ -216,6 +239,50 @@ const highlightedPath = ref<string | undefined>(undefined)
 const showAbout = ref(false)
 const showExamples = ref(false)
 const version = ref<string | null>(null)
+const latestVersion = ref<string | null>(null)
+
+// Version navigation logic
+const currentVersion = computed(() => {
+  // Check if we're on a versioned path
+  const path = window.location.pathname
+  const versionMatch = path.match(/\/v\/(\d+\.\d+)/)
+  return versionMatch ? versionMatch[1] : null
+})
+
+const isOnLatestVersion = computed(() => {
+  return !currentVersion.value || currentVersion.value === latestVersion.value
+})
+
+const previousVersion = computed(() => {
+  if (!currentVersion.value || !latestVersion.value) return null
+  
+  const [major, minor] = currentVersion.value.split('.').map(Number)
+  const [latestMajor, latestMinor] = latestVersion.value.split('.').map(Number)
+  
+  // If we're on the latest version, return the previous version
+  if (currentVersion.value === latestVersion.value) {
+    return latestMinor > 1 ? `${latestMajor}.${latestMinor - 1}` : null
+  }
+  
+  // If we're on an older version, return the next newer version
+  if (major === latestMajor && minor < latestMinor) {
+    return `${major}.${minor + 1}`
+  }
+  
+  return null
+})
+
+const getVersionUrl = (version: string) => {
+  const baseUrl = window.location.origin + window.location.pathname
+  const basePath = baseUrl.replace(/\/v\/\d+\.\d+.*$/, '').replace(/\/latest.*$/, '')
+  return `${basePath}/v/${version}/`
+}
+
+const getLatestUrl = () => {
+  const baseUrl = window.location.origin + window.location.pathname
+  const basePath = baseUrl.replace(/\/v\/\d+\.\d+.*$/, '').replace(/\/latest.*$/, '')
+  return `${basePath}/latest/`
+}
 
 const examples = ref<Example[]>([
   { name: 'dsse', data: dsseExample },
@@ -269,6 +336,16 @@ onMounted(() => {
     })
     .catch(() => {
       version.value = null
+    })
+
+  // Fetch latest version for navigation
+  fetch('/latest/version.json')
+    .then(res => res.json())
+    .then(data => {
+      latestVersion.value = data.version || null
+    })
+    .catch(() => {
+      latestVersion.value = null
     })
 
   // Add click outside handler to close popups
@@ -368,6 +445,9 @@ const handleLoadPayload = async (payload: string) => {
   --error-color: #ef4444;
   --error-bg: #fef2f2;
   --bg-hover: #f1f5f9;
+  --success-color: #10b981;
+  --success-hover: #059669;
+  --bg-secondary: #f8fafc;
 }
 
 [data-theme="dark"] {
@@ -381,6 +461,9 @@ const handleLoadPayload = async (payload: string) => {
   --error-color: #ff5555;
   --error-bg: #2d1e1e;
   --bg-hover: #44475a;
+  --success-color: #50fa7b;
+  --success-hover: #69ff94;
+  --bg-secondary: #1e1f29;
 }
 
 * {
@@ -484,7 +567,73 @@ body {
 
 .about-content {
   padding: 1rem;
-  min-width: 200px;
+  min-width: 250px;
+}
+
+.version-navigation {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.version-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.version-info {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.version-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.version-link:hover {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.version-link svg {
+  flex-shrink: 0;
+}
+
+.latest-link {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+  color: white;
+}
+
+.latest-link:hover {
+  background-color: var(--success-hover);
+  border-color: var(--success-hover);
+}
+
+.previous-link {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.previous-link:hover {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
 }
 
 .examples-dropdown {
