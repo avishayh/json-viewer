@@ -388,19 +388,7 @@ onMounted(() => {
   // Fetch latest version for navigation
   const fetchLatestVersion = async () => {
     try {
-      // Try to fetch from current path + version.json first (production)
-      const res = await fetch('./version.json')
-      if (res.ok) {
-        const data = await res.json()
-        latestVersion.value = data.version || null
-        return
-      }
-    } catch (error) {
-      console.log('Could not fetch from ./version.json')
-    }
-    
-    try {
-      // Fallback to /latest/version.json (production)
+      // Always try to fetch from /latest/version.json first (production)
       const res = await fetch('/latest/version.json')
       if (res.ok) {
         const data = await res.json()
