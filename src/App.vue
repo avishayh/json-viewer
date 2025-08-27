@@ -92,8 +92,9 @@
                   <p v-else>Loading version...</p>
                   
                   <!-- Version Navigation -->
-                  <div v-if="latestVersion" class="version-navigation">
-                    <div v-if="!isOnLatestVersion" class="version-links">
+                  <div v-if="!isDev" class="version-navigation">
+                    <!-- Show when on older version -->
+                    <div v-if="currentVersion && latestVersion && currentVersion !== latestVersion" class="version-links">
                       <p class="version-info">You're viewing an older version</p>
                       <a :href="getLatestUrl()" class="version-link latest-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -104,6 +105,7 @@
                       </a>
                     </div>
                     
+                    <!-- Show when on latest version and previous exists -->
                     <div v-if="previousVersion" class="version-links">
                       <a :href="getVersionUrl(previousVersion)" class="version-link previous-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -111,6 +113,33 @@
                         </svg>
                         Previous Version ({{ previousVersion }})
                       </a>
+                    </div>
+                    
+                    <!-- Show when on latest version but no previous version -->
+                    <div v-if="latestVersion && !currentVersion && !previousVersion" class="version-links">
+                      <p class="version-info">You're viewing the latest version</p>
+                      <div class="version-link dev-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="9,11 12,14 22,4"></polyline>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        Latest Version ({{ latestVersion }})
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Development Mode Indicator -->
+                  <div v-if="isDev" class="version-navigation">
+                    <div class="version-links">
+                      <p class="version-info">Development Mode</p>
+                      <div class="version-link dev-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="8" x2="12" y2="12"></line>
+                          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Version navigation available in production
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -249,7 +278,13 @@ const currentVersion = computed(() => {
   return versionMatch ? versionMatch[1] : null
 })
 
+const isDev = computed(() => import.meta.env.DEV)
+
 const isOnLatestVersion = computed(() => {
+  // In development mode, always consider it latest
+  if (isDev.value) {
+    return true
+  }
   return !currentVersion.value || currentVersion.value === latestVersion.value
 })
 
@@ -339,14 +374,49 @@ onMounted(() => {
     })
 
   // Fetch latest version for navigation
-  fetch('/latest/version.json')
-    .then(res => res.json())
-    .then(data => {
-      latestVersion.value = data.version || null
+  const fetchLatestVersion = async () => {
+    try {
+      // Try to fetch from /latest/version.json first (production)
+      const res = await fetch('/latest/version.json')
+      if (res.ok) {
+        const data = await res.json()
+        latestVersion.value = data.version || null
+        return
+      }
+    } catch (error) {
+      console.log('Could not fetch from /latest/version.json')
+    }
+    
+    try {
+      // Fallback to root version.json (development)
+      const res = await fetch('/version.json')
+      if (res.ok) {
+        const data = await res.json()
+        latestVersion.value = data.version || null
+        return
+      }
+    } catch (error) {
+      console.log('Could not fetch from /version.json')
+    }
+    
+    // Final fallback - use current version as latest in dev mode
+    if (version.value && version.value !== 'dev') {
+      latestVersion.value = version.value
+    } else {
+      latestVersion.value = 'dev'
+    }
+  }
+  
+  fetchLatestVersion().then(() => {
+    console.log('Version info loaded:', {
+      currentVersion: currentVersion.value,
+      latestVersion: latestVersion.value,
+      isOnLatestVersion: isOnLatestVersion.value,
+      isDev: isDev.value,
+      pathname: window.location.pathname,
+      hostname: window.location.hostname
     })
-    .catch(() => {
-      latestVersion.value = null
-    })
+  })
 
   // Add click outside handler to close popups
   document.addEventListener('click', handleClickOutside)
@@ -634,6 +704,20 @@ body {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
   color: white;
+}
+
+.dev-link {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.dev-link:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  transform: none;
 }
 
 .examples-dropdown {
