@@ -115,6 +115,11 @@
                       </a>
                     </div>
                     
+                    <!-- Debug info (temporary) -->
+                    <div v-if="!isDev" style="font-size: 10px; color: #999; margin-top: 8px;">
+                      Debug: latest={{ latestVersion }}, current={{ currentVersion }}, previous={{ previousVersion }}
+                    </div>
+                    
                     <!-- Show when on latest version but no previous version -->
                     <div v-if="latestVersion && !currentVersion && !previousVersion" class="version-links">
                       <p class="version-info">You're viewing the latest version</p>
@@ -289,19 +294,23 @@ const isOnLatestVersion = computed(() => {
 })
 
 const previousVersion = computed(() => {
-  if (!currentVersion.value || !latestVersion.value) return null
+  if (!latestVersion.value) return null
   
-  const [major, minor] = currentVersion.value.split('.').map(Number)
   const [latestMajor, latestMinor] = latestVersion.value.split('.').map(Number)
   
-  // If we're on the latest version, return the previous version
-  if (currentVersion.value === latestVersion.value) {
-    return latestMinor > 1 ? `${latestMajor}.${latestMinor - 1}` : null
+  // If we're on the latest version (no currentVersion or currentVersion === latestVersion)
+  // Show the previous version (latestMinor - 1)
+  if (!currentVersion.value || currentVersion.value === latestVersion.value) {
+    if (latestMinor > 1) {
+      return `${latestMajor}.${latestMinor - 1}`
+    }
+    return null
   }
   
-  // If we're on an older version, return the next newer version
-  if (major === latestMajor && minor < latestMinor) {
-    return `${major}.${minor + 1}`
+  // If we're on an older version, show the next newer version
+  const [currentMajor, currentMinor] = currentVersion.value.split('.').map(Number)
+  if (currentMajor === latestMajor && currentMinor < latestMinor) {
+    return `${currentMajor}.${currentMinor + 1}`
   }
   
   return null
@@ -411,6 +420,7 @@ onMounted(() => {
     console.log('Version info loaded:', {
       currentVersion: currentVersion.value,
       latestVersion: latestVersion.value,
+      previousVersion: previousVersion.value,
       isOnLatestVersion: isOnLatestVersion.value,
       isDev: isDev.value,
       pathname: window.location.pathname,
