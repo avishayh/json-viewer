@@ -278,8 +278,6 @@ const formattedVerification = computed(() => {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 1.5rem;
-  max-height: 500px;
-  overflow-y: auto;
 }
 
 .verification-content pre {

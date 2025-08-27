@@ -254,8 +254,6 @@ export default defineComponent({
   border-radius: 8px;
   padding: 1rem;
   background-color: var(--surface-color);
-  overflow-y: auto;
-  height: calc(100vh - 300px);
 }
 
 :deep(.vjs-tree) {

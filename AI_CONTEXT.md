@@ -146,3 +146,8 @@ src/
 - Vite dev server with HMR
 - TypeScript compilation
 - Vue 3 development tools recommended
+
+## Development Workflow Notes
+- **Vite Dev Server**: Use `npm run dev` only once - Vite automatically reloads on file changes
+- **No Need for Multiple Instances**: Avoid running multiple `npm run dev` commands as it creates unnecessary port conflicts
+- **Hot Reload**: Vite provides instant hot reload when files are saved, no need to restart the server

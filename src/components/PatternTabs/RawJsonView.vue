@@ -27,6 +27,5 @@ const getOriginalValueOrDefault = (obj: object): string | undefined => {
 <style scoped>
 .raw-json-view {
   height: 100%;
-  overflow: auto;
 }
 </style> 
