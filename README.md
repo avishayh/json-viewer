@@ -3,7 +3,7 @@
 A modern web-based JSON viewer built with Vite and TypeScript that provides an intuitive interface for viewing and interacting with JSON data. Specifically designed for working with DSSE (Dead Simple Signing Envelope) and In-toto specifications.
 
 ## Features
-
+ 
 - Clean and modern user interface
 - Real-time JSON data visualization
 - Automatic base64 decoding of encoded fields
