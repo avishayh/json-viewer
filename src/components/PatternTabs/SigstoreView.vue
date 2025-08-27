@@ -1,59 +1,83 @@
 <template>
-  <div class="sigstore-view">
-    <div class="metadata-section">
-      <h3>Sigstore Bundle Metadata</h3>
-      <div class="metadata-grid">
-        <div class="metadata-item">
-          <span class="label">Media Type:</span>
-          <span class="value">{{ patternInfo.metadata.mediaType }}</span>
-        </div>
-        <div class="metadata-item">
-          <span class="label">TLog Entries:</span>
-          <span class="value">{{ patternInfo.metadata.tlogEntryCount }}</span>
-        </div>
-        <div class="metadata-item">
-          <span class="label">Certificate Chain:</span>
-          <span class="value" :class="{ 'has-value': patternInfo.metadata.hasCertificateChain }">
-            {{ patternInfo.metadata.hasCertificateChain ? 'Present' : 'Not Present' }}
-          </span>
-        </div>
-        <div class="metadata-item">
-          <span class="label">Signed Timestamp:</span>
-          <span class="value" :class="{ 'has-value': patternInfo.metadata.hasTimestamp }">
-            {{ patternInfo.metadata.hasTimestamp ? 'Present' : 'Not Present' }}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="!hasDsseEnvelope" class="content-section">
-      <h3>Content</h3>
-      <div class="content-type">
-        <span class="label">Type:</span>
-        <span class="value">{{ contentType }}</span>
-      </div>
-      <div class="content-preview">
-        <pre><code>{{ formattedContent }}</code></pre>
-      </div>
-    </div>
-
-    <div v-else class="content-section">
-      <button @click="viewDsseContent" class="action-button">
-        View DSSE Content
+  <div class="sigstore-panel">
+    <!-- Horizontal tabs taking full width -->
+    <div class="panel-tabs">
+      <button 
+        v-for="tab in availableTabs" 
+        :key="tab.key"
+        :class="['panel-tab', { active: activeTab === tab.key }]"
+        @click="activeTab = tab.key"
+      >
+        {{ tab.label }}
       </button>
     </div>
 
-    <div class="verification-section" v-if="patternInfo.metadata.hasVerificationMaterial">
-      <h3>Verification Material</h3>
-      <div class="verification-content">
-        <pre><code>{{ formattedVerification }}</code></pre>
+    <!-- Full-height content area -->
+    <div class="panel-content">
+      <!-- Bundle Metadata Tab -->
+      <div v-if="activeTab === 'metadata'" class="tab-content">
+        <div class="metadata-section">
+          <div class="metadata-grid">
+            <div class="metadata-item">
+              <span class="label">Media Type:</span>
+              <span class="value">{{ patternInfo.metadata.mediaType }}</span>
+            </div>
+            <div class="metadata-item">
+              <span class="label">TLog Entries:</span>
+              <span class="value">{{ patternInfo.metadata.tlogEntryCount }}</span>
+            </div>
+            <div class="metadata-item">
+              <span class="label">Certificate Chain:</span>
+              <span class="value" :class="{ 'has-value': patternInfo.metadata.hasCertificateChain }">
+                {{ patternInfo.metadata.hasCertificateChain ? 'Present' : 'Not Present' }}
+              </span>
+            </div>
+            <div class="metadata-item">
+              <span class="label">Signed Timestamp:</span>
+              <span class="value" :class="{ 'has-value': patternInfo.metadata.hasTimestamp }">
+                {{ patternInfo.metadata.hasTimestamp ? 'Present' : 'Not Present' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verification Material Tab -->
+      <div v-if="activeTab === 'verification'" class="tab-content">
+        <div class="verification-section">
+          <div class="verification-content">
+            <pre><code>{{ formattedVerification }}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DSSE Envelope Tab -->
+      <div v-if="activeTab === 'dsse'" class="tab-content">
+        <div class="dsse-section">
+          <SigstoreDsseSection :dsse-envelope="dsseEnvelope" />
+        </div>
+      </div>
+
+      <!-- In-toto Statement Tab -->
+      <div v-if="activeTab === 'intoto'" class="tab-content">
+        <div class="intoto-section">
+          <SigstoreInTotoSection 
+            v-if="showInTotoSection" 
+            :in-toto-data="inTotoData" 
+          />
+          <div v-else class="no-intoto">
+            <p>In-toto statement not available. Enable transformations to view In-toto data.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import SigstoreDsseSection from '../SigstoreDsseSection.vue'
+import SigstoreInTotoSection from '../SigstoreInTotoSection.vue'
 import type { PatternInfo } from '../../composables/patternRecognizer'
 
 interface SigstoreMetadata {
@@ -70,159 +94,155 @@ interface SigstoreMetadata {
 const props = defineProps<{
   json: any
   patternInfo: PatternInfo & { metadata: SigstoreMetadata }
+  transformEnabled: boolean
 }>()
 
-const emit = defineEmits<{
-  (e: 'load-payload', payload: string): void
-}>()
+// Active tab state
+const activeTab = ref('metadata')
 
-const contentType = computed(() => {
-  if (props.json.content?.messageSignature) return 'Message Signature'
-  if (props.json.content?.dsseEnvelope) return 'DSSE Envelope'
-  if (props.json.dsseEnvelope) return 'DSSE Envelope'
-  if (props.json.content?.bundle) return 'Bundle'
-  return 'Unknown'
+// Available tabs based on data and settings
+const availableTabs = computed(() => {
+  const tabs = [
+    { key: 'metadata', label: 'Metadata' }
+  ]
+  
+  // Add Verification Material tab if it exists
+  if (props.patternInfo.metadata.hasVerificationMaterial) {
+    tabs.push({ key: 'verification', label: 'Verification Material' })
+  }
+  
+  // Add DSSE tab if DSSE envelope exists
+  if (hasDsseEnvelope.value) {
+    tabs.push({ key: 'dsse', label: 'DSSE Envelope' })
+  }
+  
+  // Add In-toto tab if transformations enabled and data exists
+  if (props.transformEnabled && showInTotoSection.value) {
+    tabs.push({ key: 'intoto', label: 'In-toto Statement' })
+  }
+  
+  return tabs
+})
+
+// Extract DSSE envelope from Sigstore bundle
+const dsseEnvelope = computed(() => {
+  return props.json.dsseEnvelope || props.json.content?.dsseEnvelope
 })
 
 const hasDsseEnvelope = computed(() => {
-  return !!props.json.dsseEnvelope || !!props.json.content?.dsseEnvelope
+  return !!dsseEnvelope.value
 })
 
-const viewDsseContent = () => {
-  const dsseEnvelope = props.json.dsseEnvelope || props.json.content?.dsseEnvelope
-  if (dsseEnvelope) {
-    emit('load-payload', JSON.stringify(dsseEnvelope))
-  }
-}
-
-const formattedContent = computed(() => {
-  try {
-    const content = props.json.content?.messageSignature || 
-                   props.json.content?.dsseEnvelope || 
-                   props.json.dsseEnvelope ||
-                   props.json.content?.bundle
-    if (!content) return 'No content available'
-
-    // If it's a DSSE envelope, try to decode the payload
-    if (props.json.dsseEnvelope?.payload || props.json.content?.dsseEnvelope?.payload) {
-      const payload = props.json.dsseEnvelope?.payload || props.json.content?.dsseEnvelope?.payload
+// In-toto data extraction
+const inTotoData = computed(() => {
+  if (!dsseEnvelope.value?.payload) return null
+  
+  const rawPayload = dsseEnvelope.value.payload
+  let parsedPayload = null
+  
+  // Check if payload is already an object
+  if (typeof rawPayload === 'object' && rawPayload !== null) {
+    parsedPayload = rawPayload
+  } else if (typeof rawPayload === 'string') {
+    // Try to parse as JSON first
+    try {
+      parsedPayload = JSON.parse(rawPayload)
+    } catch {
+      // If JSON parsing fails, try base64 decoding
       try {
-        // First try to parse as JSON directly
+        const decoded = atob(rawPayload)
+        parsedPayload = JSON.parse(decoded)
+      } catch {
+        // Try with decodeURIComponent fallback
         try {
-          const parsed = JSON.parse(payload)
-          return JSON.stringify(parsed, null, 2)
+          const decoded = decodeURIComponent(escape(atob(rawPayload)))
+          parsedPayload = JSON.parse(decoded)
         } catch {
-          // If not valid JSON, try base64 decoding
-          try {
-            // Check if the string is base64 encoded
-            const isBase64 = /^[A-Za-z0-9+/=]+$/.test(payload)
-            if (!isBase64) {
-              return payload
-            }
-
-            const decoded = decodeURIComponent(escape(atob(payload)))
-            try {
-              // Try to parse as JSON
-              const parsed = JSON.parse(decoded)
-              return JSON.stringify(parsed, null, 2)
-            } catch {
-              // If not valid JSON, return the decoded string
-              return decoded
-            }
-          } catch (e) {
-            console.error('Error decoding DSSE payload:', e)
-            return payload
-          }
+          return null
         }
-      } catch (e) {
-        console.error('Error processing DSSE payload:', e)
-        return 'Unable to process DSSE payload'
       }
     }
-
-    // For message signatures, try to decode the message
-    if (props.json.content?.messageSignature?.message) {
-      try {
-        // First try to parse as JSON directly
-        try {
-          const parsed = JSON.parse(props.json.content.messageSignature.message)
-          return JSON.stringify(parsed, null, 2)
-        } catch {
-          // If not valid JSON, try base64 decoding
-          try {
-            // Check if the string is base64 encoded
-            const isBase64 = /^[A-Za-z0-9+/=]+$/.test(props.json.content.messageSignature.message)
-            if (!isBase64) {
-              return props.json.content.messageSignature.message
-            }
-
-            const decoded = decodeURIComponent(escape(atob(props.json.content.messageSignature.message)))
-            try {
-              // Try to parse as JSON
-              const parsed = JSON.parse(decoded)
-              return JSON.stringify(parsed, null, 2)
-            } catch {
-              // If not valid JSON, return the decoded string
-              return decoded
-            }
-          } catch (e) {
-            console.error('Error decoding message:', e)
-            return props.json.content.messageSignature.message
-          }
-        }
-      } catch (e) {
-        console.error('Error processing message:', e)
-        return 'Unable to process message'
-      }
-    }
-
-    // For bundle content
-    if (props.json.content?.bundle) {
-      return JSON.stringify(props.json.content.bundle, null, 2)
-    }
-
-    return JSON.stringify(content, null, 2)
-  } catch (e) {
-    console.error('Error formatting content:', e)
-    return 'Unable to format content'
   }
+  
+  // Check if it's an In-toto statement
+  if (parsedPayload?._type === 'https://in-toto.io/Statement/v1') {
+    return parsedPayload
+  }
+  
+  return null
 })
 
+// Show In-toto section condition
+const showInTotoSection = computed(() => {
+  return props.transformEnabled && inTotoData.value !== null
+})
+
+// Format verification material
 const formattedVerification = computed(() => {
-  try {
-    if (!props.json.verificationMaterial) return 'No verification material available'
-    return JSON.stringify(props.json.verificationMaterial, null, 2)
-  } catch (e) {
-    console.error('Error formatting verification material:', e)
-    return 'Unable to format verification material'
-  }
+  const verificationMaterial = props.json.verificationMaterial
+  if (!verificationMaterial) return 'No verification material available'
+  return JSON.stringify(verificationMaterial, null, 2)
 })
 </script>
 
 <style scoped>
-.sigstore-view {
+.sigstore-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
   height: 100%;
-  overflow: auto;
-  padding: 1rem;
+  width: 100%;
+}
+
+.panel-tabs {
+  display: flex;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 4px 4px 0 0;
+}
+
+.panel-tab {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.panel-tab:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.panel-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--primary-color);
+  background-color: var(--bg-primary);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+  border-radius: 0 0 4px 4px;
+}
+
+.tab-content {
+  height: 100%;
+  padding: 1.5rem;
 }
 
 .metadata-section,
-.content-section,
-.verification-section {
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-color);
-  font-size: 1.1rem;
-  font-weight: 600;
+.verification-section,
+.dsse-section,
+.intoto-section {
+  height: 100%;
 }
 
 .metadata-grid {
@@ -235,10 +255,6 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 0.75rem;
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
 }
 
 .label {
@@ -250,77 +266,40 @@ h3 {
 .value {
   font-family: monospace;
   word-break: break-all;
-  color: var(--text-color);
-  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
 .value.has-value {
   color: var(--success-color);
-  font-weight: 500;
 }
 
-.content-type {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.content-preview,
 .verification-content {
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  padding: 1rem;
-  overflow: auto;
-  border: 1px solid var(--border-color);
-  max-height: 400px;
-}
-
-pre {
-  margin: 0;
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-code {
-  color: var(--text-color);
-}
-
-.content-section {
   background-color: var(--bg-secondary);
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-height: 500px;
+  overflow-y: auto;
 }
 
-.action-button {
-  width: 100%;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
+.verification-content pre {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.verification-content code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.no-intoto {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-}
-
-.action-button:hover {
-  background-color: var(--primary-hover);
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  height: 300px;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 1.1rem;
 }
 </style> 

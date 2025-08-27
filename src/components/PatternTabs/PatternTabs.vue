@@ -36,6 +36,7 @@
         v-if="activeTab === 'SIGSTORE'"
         :json="json"
         :pattern-info="patternInfo"
+        :transform-enabled="transformEnabled"
         @load-payload="handleLoadPayload"
       />
       <InTotoView
