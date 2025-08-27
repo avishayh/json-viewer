@@ -105,8 +105,8 @@
                       </p>
                     </div>
                     
-                    <!-- Show "Go to Latest" when on older version -->
-                    <div v-if="currentVersion && latestVersion && currentVersion !== latestVersion" class="version-links">
+                    <!-- Show "Go to Latest" when NOT on latest version -->
+                    <div v-if="latestVersion && currentVersion && currentVersion !== latestVersion" class="version-links">
                       <a :href="getLatestUrl()" class="version-link latest-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <polyline points="9,11 12,14 22,4"></polyline>
@@ -124,6 +124,11 @@
                         </svg>
                         Previous Version ({{ previousVersion }})
                       </a>
+                    </div>
+                    
+                    <!-- Debug info (temporary) -->
+                    <div v-if="!isDev" style="font-size: 10px; color: #999; margin-top: 8px;">
+                      Debug: latest={{ latestVersion }}, current={{ currentVersion }}, showLatest={{ latestVersion && currentVersion && currentVersion !== latestVersion }}
                     </div>
                     
 
