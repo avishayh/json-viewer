@@ -151,3 +151,4 @@ src/
 - **Vite Dev Server**: Use `npm run dev` only once - Vite automatically reloads on file changes
 - **No Need for Multiple Instances**: Avoid running multiple `npm run dev` commands as it creates unnecessary port conflicts
 - **Hot Reload**: Vite provides instant hot reload when files are saved, no need to restart the server
+- **Commit Messages**: When suggesting commit messages, keep them short and concise (e.g., "Fix version navigation paths" instead of long descriptive messages)

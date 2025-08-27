@@ -93,9 +93,20 @@
                   
                   <!-- Version Navigation -->
                   <div v-if="!isDev" class="version-navigation">
-                    <!-- Show when on older version -->
+                    <!-- Always show current version status -->
+                    <div v-if="latestVersion" class="version-links">
+                      <p class="version-info">
+                        <span v-if="!currentVersion || currentVersion === latestVersion">
+                          You're viewing the latest version ({{ latestVersion }})
+                        </span>
+                        <span v-else>
+                          You're viewing version {{ currentVersion }} (latest is {{ latestVersion }})
+                        </span>
+                      </p>
+                    </div>
+                    
+                    <!-- Show "Go to Latest" when on older version -->
                     <div v-if="currentVersion && latestVersion && currentVersion !== latestVersion" class="version-links">
-                      <p class="version-info">You're viewing an older version</p>
                       <a :href="getLatestUrl()" class="version-link latest-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <polyline points="9,11 12,14 22,4"></polyline>
@@ -105,8 +116,8 @@
                       </a>
                     </div>
                     
-                    <!-- Show when on latest version and previous exists -->
-                    <div v-if="previousVersion" class="version-links">
+                    <!-- Show "Previous Version" when on latest and previous exists -->
+                    <div v-if="previousVersion && (!currentVersion || currentVersion === latestVersion)" class="version-links">
                       <a :href="getVersionUrl(previousVersion)" class="version-link previous-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <polyline points="15,18 9,12 15,6"></polyline>
@@ -115,22 +126,7 @@
                       </a>
                     </div>
                     
-                    <!-- Debug info (temporary) -->
-                    <div v-if="!isDev" style="font-size: 10px; color: #999; margin-top: 8px;">
-                      Debug: latest={{ latestVersion }}, current={{ currentVersion }}, previous={{ previousVersion }}
-                    </div>
-                    
-                    <!-- Show when on latest version but no previous version -->
-                    <div v-if="latestVersion && !currentVersion && !previousVersion" class="version-links">
-                      <p class="version-info">You're viewing the latest version</p>
-                      <div class="version-link dev-link">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="9,11 12,14 22,4"></polyline>
-                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                        </svg>
-                        Latest Version ({{ latestVersion }})
-                      </div>
-                    </div>
+
                   </div>
                   
                   <!-- Development Mode Indicator -->
@@ -318,12 +314,14 @@ const previousVersion = computed(() => {
 
 const getVersionUrl = (version: string) => {
   const baseUrl = window.location.origin + window.location.pathname
+  // Extract the base path (e.g., /json-viewer/) from the current URL
   const basePath = baseUrl.replace(/\/v\/\d+\.\d+.*$/, '').replace(/\/latest.*$/, '')
   return `${basePath}/v/${version}/`
 }
 
 const getLatestUrl = () => {
   const baseUrl = window.location.origin + window.location.pathname
+  // Extract the base path (e.g., /json-viewer/) from the current URL
   const basePath = baseUrl.replace(/\/v\/\d+\.\d+.*$/, '').replace(/\/latest.*$/, '')
   return `${basePath}/latest/`
 }
@@ -385,7 +383,19 @@ onMounted(() => {
   // Fetch latest version for navigation
   const fetchLatestVersion = async () => {
     try {
-      // Try to fetch from /latest/version.json first (production)
+      // Try to fetch from current path + version.json first (production)
+      const res = await fetch('./version.json')
+      if (res.ok) {
+        const data = await res.json()
+        latestVersion.value = data.version || null
+        return
+      }
+    } catch (error) {
+      console.log('Could not fetch from ./version.json')
+    }
+    
+    try {
+      // Fallback to /latest/version.json (production)
       const res = await fetch('/latest/version.json')
       if (res.ok) {
         const data = await res.json()
