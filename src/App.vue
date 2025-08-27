@@ -389,7 +389,9 @@ onMounted(() => {
   const fetchLatestVersion = async () => {
     try {
       // Always try to fetch from /latest/version.json first (production)
-      const res = await fetch('/latest/version.json')
+      // Add cache-busting parameter to prevent browser caching
+      const timestamp = Date.now()
+      const res = await fetch(`/latest/version.json?t=${timestamp}`)
       if (res.ok) {
         const data = await res.json()
         latestVersion.value = data.version || null
