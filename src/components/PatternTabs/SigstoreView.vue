@@ -68,20 +68,28 @@
                   </div>
                   <div class="cert-details">
                     <div class="cert-field">
-                      <span class="label">Certificate Type:</span>
-                      <span class="value">{{ cert.type }}</span>
+                      <span class="label">Subject:</span>
+                      <span class="value">{{ cert.fullSubject }}</span>
                     </div>
                     <div class="cert-field">
-                      <span class="label">Certificate Length:</span>
-                      <span class="value">{{ cert.certLength }} characters</span>
+                      <span class="label">Issuer:</span>
+                      <span class="value">{{ cert.fullIssuer }}</span>
                     </div>
                     <div class="cert-field">
-                      <span class="label">Base64 Preview:</span>
-                      <span class="value">{{ cert.base64Data }}</span>
+                      <span class="label">Valid From:</span>
+                      <span class="value">{{ cert.notBefore }}</span>
                     </div>
                     <div class="cert-field">
-                      <span class="label">Raw Data:</span>
-                      <span class="value">{{ cert.raw }}</span>
+                      <span class="label">Valid Until:</span>
+                      <span class="value">{{ cert.notAfter }}</span>
+                    </div>
+                    <div class="cert-field">
+                      <span class="label">Key Algorithm:</span>
+                      <span class="value">{{ cert.keyAlgorithm }} {{ cert.keySize }}-bit</span>
+                    </div>
+                    <div class="cert-field">
+                      <span class="label">Signature Algorithm:</span>
+                      <span class="value">{{ cert.signatureAlgorithm }}</span>
                     </div>
                   </div>
                 </div>
@@ -116,6 +124,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import * as forge from 'node-forge'
 import SigstoreDsseSection from '../SigstoreDsseSection.vue'
 import SigstoreInTotoSection from '../SigstoreInTotoSection.vue'
 import type { PatternInfo } from '../../composables/patternRecognizer'
@@ -242,8 +251,38 @@ const certificates = computed(() => {
   
   return certs.map((cert: string, index: number) => {
     try {
-      // For now, show basic info since we can't easily parse DER certificates in browser
-      const certLength = cert.length
+      // Parse certificate using node-forge
+      const derBytes = forge.util.decode64(cert)
+      const asn1 = forge.asn1.fromDer(derBytes)
+      const certificate = forge.pki.certificateFromAsn1(asn1)
+      
+      // Extract certificate information
+      const subject = certificate.subject.getField('CN')?.value || 
+                     certificate.subject.getField('O')?.value || 
+                     'Unknown Subject'
+      const issuer = certificate.issuer.getField('CN')?.value || 
+                    certificate.issuer.getField('O')?.value || 
+                    'Unknown Issuer'
+      
+      // Format dates
+      const notBefore = new Date(certificate.validity.notBefore).toLocaleString()
+      const notAfter = new Date(certificate.validity.notAfter).toLocaleString()
+      
+      // Check if certificate is currently valid
+      const now = new Date()
+      const isValid = now >= certificate.validity.notBefore && now <= certificate.validity.notAfter
+      
+      // Get key information
+      const publicKey = certificate.publicKey
+      let keySize = 'Unknown'
+      let keyAlgorithm = 'Unknown'
+      
+      if (publicKey && 'n' in publicKey) {
+        keySize = (publicKey as any).n.bitLength()
+        keyAlgorithm = 'RSA'
+      }
+      
+      // Determine certificate type
       const isLeaf = index === 0
       const isRoot = index === certs.length - 1
       const type = isLeaf ? 'Leaf' : isRoot ? 'Root' : 'Intermediate'
@@ -251,16 +290,22 @@ const certificates = computed(() => {
       return {
         index,
         raw: cert,
-        subject: `Certificate ${index + 1} (${type})`,
-        issuer: `Issuer ${index + 1}`,
-        notBefore: 'See certificate details',
-        notAfter: 'See certificate details',
-        isValid: true,
-        type,
-        certLength,
-        base64Data: cert.substring(0, 50) + '...'
+        subject: subject,
+        issuer: issuer,
+        notBefore: notBefore,
+        notAfter: notAfter,
+        isValid: isValid,
+        type: type,
+        keySize: keySize,
+        keyAlgorithm: keyAlgorithm,
+        certLength: cert.length,
+        // Additional fields for detailed display
+        fullSubject: certificate.subject.toString(),
+        fullIssuer: certificate.issuer.toString(),
+        signatureAlgorithm: 'Unknown' // Will be enhanced in future iterations
       }
     } catch (error) {
+      console.error('Error parsing certificate:', error)
       return {
         index,
         raw: cert,
@@ -269,7 +314,13 @@ const certificates = computed(() => {
         notBefore: 'Unknown',
         notAfter: 'Unknown',
         isValid: false,
-        type: 'Unknown'
+        type: 'Unknown',
+        keySize: 'Unknown',
+        keyAlgorithm: 'Unknown',
+        certLength: cert.length,
+        fullSubject: 'Error parsing certificate',
+        fullIssuer: 'Unknown',
+        signatureAlgorithm: 'Unknown'
       }
     }
   })
