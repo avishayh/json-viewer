@@ -59,9 +59,9 @@
             <div class="chain-visualization">
               <div v-for="(cert, index) in certificates" :key="cert.index" class="chain-link">
                 <div v-if="index > 0" class="chain-arrow">↓</div>
-                <div class="certificate-card" :class="{ 'leaf': cert.type === 'Leaf', 'intermediate': cert.type === 'Intermediate', 'root': cert.type === 'Root' }">
+                <div class="certificate-card">
                   <div class="cert-header">
-                    <span class="cert-type">{{ cert.type }} Certificate</span>
+                                          <span class="cert-type">Certificate {{ cert.index + 1 }}</span>
                     <span class="cert-status" :class="{ 'valid': cert.isValid, 'invalid': !cert.isValid }">
                       {{ cert.isValid ? '✅ Valid' : '❌ Invalid' }}
                     </span>
@@ -69,11 +69,11 @@
                   <div class="cert-details">
                     <div class="cert-field">
                       <span class="label">Subject:</span>
-                      <span class="value">{{ cert.fullSubject }}</span>
+                      <span class="value">{{ cert.subject || 'Empty' }}</span>
                     </div>
                     <div class="cert-field">
                       <span class="label">Issuer:</span>
-                      <span class="value">{{ cert.fullIssuer }}</span>
+                      <span class="value">{{ cert.issuer }}</span>
                     </div>
                     <div class="cert-field">
                       <span class="label">Valid From:</span>
@@ -90,6 +90,10 @@
                     <div class="cert-field">
                       <span class="label">Signature Algorithm:</span>
                       <span class="value">{{ cert.signatureAlgorithm }}</span>
+                    </div>
+                    <div class="cert-field">
+                      <span class="label">Serial Number:</span>
+                      <span class="value">{{ cert.serialNumber }}</span>
                     </div>
                   </div>
                 </div>
@@ -124,7 +128,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import * as forge from 'node-forge'
+import { CertificateParser } from '../../utils/certificateParser'
 import SigstoreDsseSection from '../SigstoreDsseSection.vue'
 import SigstoreInTotoSection from '../SigstoreInTotoSection.vue'
 import type { PatternInfo } from '../../composables/patternRecognizer'
@@ -249,81 +253,9 @@ const certificates = computed(() => {
     return []
   }
   
-  return certs.map((cert: string, index: number) => {
-    try {
-      // Parse certificate using node-forge
-      const derBytes = forge.util.decode64(cert)
-      const asn1 = forge.asn1.fromDer(derBytes)
-      const certificate = forge.pki.certificateFromAsn1(asn1)
-      
-      // Extract certificate information
-      const subject = certificate.subject.getField('CN')?.value || 
-                     certificate.subject.getField('O')?.value || 
-                     'Unknown Subject'
-      const issuer = certificate.issuer.getField('CN')?.value || 
-                    certificate.issuer.getField('O')?.value || 
-                    'Unknown Issuer'
-      
-      // Format dates
-      const notBefore = new Date(certificate.validity.notBefore).toLocaleString()
-      const notAfter = new Date(certificate.validity.notAfter).toLocaleString()
-      
-      // Check if certificate is currently valid
-      const now = new Date()
-      const isValid = now >= certificate.validity.notBefore && now <= certificate.validity.notAfter
-      
-      // Get key information
-      const publicKey = certificate.publicKey
-      let keySize = 'Unknown'
-      let keyAlgorithm = 'Unknown'
-      
-      if (publicKey && 'n' in publicKey) {
-        keySize = (publicKey as any).n.bitLength()
-        keyAlgorithm = 'RSA'
-      }
-      
-      // Determine certificate type
-      const isLeaf = index === 0
-      const isRoot = index === certs.length - 1
-      const type = isLeaf ? 'Leaf' : isRoot ? 'Root' : 'Intermediate'
-      
-      return {
-        index,
-        raw: cert,
-        subject: subject,
-        issuer: issuer,
-        notBefore: notBefore,
-        notAfter: notAfter,
-        isValid: isValid,
-        type: type,
-        keySize: keySize,
-        keyAlgorithm: keyAlgorithm,
-        certLength: cert.length,
-        // Additional fields for detailed display
-        fullSubject: certificate.subject.toString(),
-        fullIssuer: certificate.issuer.toString(),
-        signatureAlgorithm: 'Unknown' // Will be enhanced in future iterations
-      }
-    } catch (error) {
-      console.error('Error parsing certificate:', error)
-      return {
-        index,
-        raw: cert,
-        subject: 'Error parsing certificate',
-        issuer: 'Unknown',
-        notBefore: 'Unknown',
-        notAfter: 'Unknown',
-        isValid: false,
-        type: 'Unknown',
-        keySize: 'Unknown',
-        keyAlgorithm: 'Unknown',
-        certLength: cert.length,
-        fullSubject: 'Error parsing certificate',
-        fullIssuer: 'Unknown',
-        signatureAlgorithm: 'Unknown'
-      }
-    }
-  })
+  // Use the new certificate parser
+  const parser = new CertificateParser(true)
+  return parser.parseCertificates(certs)
 })
 
 const hasCertificates = computed(() => {

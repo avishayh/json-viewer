@@ -392,13 +392,25 @@ onMounted(() => {
 
   // Fetch latest version for navigation
   const fetchLatestVersion = async () => {
+    // Skip version fetching in development mode
+    if (isDev.value) {
+      latestVersion.value = 'dev'
+      return
+    }
+    
     try {
       // Always try to fetch from /latest/version.json first (production)
       // Add cache-busting parameter to prevent browser caching
       const timestamp = Date.now()
       // Use absolute path from the project root
       const basePath = window.location.pathname.replace(/\/latest.*$/, '').replace(/\/v\/\d+\.\d+.*$/, '')
-      const res = await fetch(`${basePath}/latest/version.json?t=${timestamp}`)
+      const fullUrl = basePath === '/' ? '/latest/version.json' : `${basePath}/latest/version.json`
+      console.log('Version fetch debug:', {
+        pathname: window.location.pathname,
+        basePath: basePath,
+        fullUrl: `${fullUrl}?t=${timestamp}`
+      })
+      const res = await fetch(`${fullUrl}?t=${timestamp}`)
       if (res.ok) {
         const data = await res.json()
         latestVersion.value = data.version || null
