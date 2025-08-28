@@ -62,9 +62,13 @@
                 <div class="certificate-card">
                   <div class="cert-header">
                                           <span class="cert-type">Certificate {{ cert.index + 1 }}</span>
-                    <span class="cert-status" :class="{ 'valid': cert.isValid, 'invalid': !cert.isValid }">
-                      {{ cert.isValid ? '✅ Valid' : '❌ Invalid' }}
-                    </span>
+                                          <span class="cert-status" :class="cert.status">
+                        {{ 
+                          cert.status === 'valid' ? '✅ Valid' : 
+                          cert.status === 'expired' ? '⚠️ Expired' : 
+                          '❌ Invalid' 
+                        }}
+                      </span>
                   </div>
                   <div class="cert-details">
                     <div class="cert-field">
@@ -464,6 +468,10 @@ const formattedVerification = computed(() => {
 
 .cert-status.valid {
   color: var(--success-color);
+}
+
+.cert-status.expired {
+  color: #ff8c00; /* Orange color for expired */
 }
 
 .cert-status.invalid {

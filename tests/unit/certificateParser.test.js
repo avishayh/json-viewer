@@ -48,9 +48,15 @@ class CertificateParserV3 {
         console.log('Public key algorithm:', cert.publicKey.algorithm.name);
       }
       
-      // Check validity
+      // Check validity status
       const now = new Date();
-      const isValid = now >= cert.notBefore && now <= cert.notAfter;
+      let status = 'valid';
+      
+      if (now < cert.notBefore) {
+        status = 'invalid'; // Certificate not yet valid
+      } else if (now > cert.notAfter) {
+        status = 'expired'; // Certificate has expired
+      }
       
       // Extract subject and issuer information
       const subjectStr = this.formatName(cert.subject);
@@ -68,7 +74,7 @@ class CertificateParserV3 {
         issuer: issuerStr,
         notBefore: cert.notBefore.toLocaleString(),
         notAfter: cert.notAfter.toLocaleString(),
-        isValid: isValid,
+        status: status,
         keySize: keySize,
         keyAlgorithm: keyAlgorithm,
         signatureAlgorithm: cert.signatureAlgorithm.name,
@@ -148,7 +154,7 @@ class CertificateParserV3 {
       issuer: 'Unknown',
       notBefore: 'Unknown',
       notAfter: 'Unknown',
-      isValid: false,
+      status: 'invalid',
       keySize: 'Unknown',
       keyAlgorithm: 'Unknown',
       signatureAlgorithm: 'Unknown',
@@ -296,7 +302,7 @@ class CertificateParserTestSuite {
       const results = this.parser.parseCertificates(certificates);
       
       const success = results.length === 2 && 
-                     results.every(cert => cert.subject !== 'Error parsing certificate');
+                     results.every(cert => cert.status !== 'invalid');
       
       console.log(`  Found ${results.length} certificates`);
       results.forEach((cert, index) => {
@@ -322,11 +328,11 @@ class CertificateParserTestSuite {
     try {
       // Test empty certificate
       const emptyResult = this.parser.parseCertificate('', 0);
-      const emptySuccess = emptyResult.subject === 'Error parsing certificate';
+      const emptySuccess = emptyResult.status === 'invalid';
       
       // Test invalid certificate
       const invalidResult = this.parser.parseCertificate('invalid-data', 0);
-      const invalidSuccess = invalidResult.subject === 'Error parsing certificate';
+      const invalidSuccess = invalidResult.status === 'invalid';
       
       const success = emptySuccess && invalidSuccess;
       

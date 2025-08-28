@@ -14,13 +14,15 @@ export interface CertificateInfo {
   serialNumber: string
 }
 
+export type CertificateStatus = 'valid' | 'expired' | 'invalid'
+
 export interface ParsedCertificate {
   index: number
   subject: string
   issuer: string
   notBefore: string
   notAfter: string
-  isValid: boolean
+  status: CertificateStatus
   keySize: string
   keyAlgorithm: string
   signatureAlgorithm: string
@@ -81,15 +83,21 @@ export class CertificateParser {
       const cert = new X509Certificate(certBuffer)
       this.log('Certificate parsed successfully with @peculiar/x509')
 
-      // Check validity
+      // Check validity status
       const now = new Date()
-      const isValid = now >= cert.notBefore && now <= cert.notAfter
+      let status: CertificateStatus = 'valid'
+      
+      if (now < cert.notBefore) {
+        status = 'invalid' // Certificate not yet valid
+      } else if (now > cert.notAfter) {
+        status = 'expired' // Certificate has expired
+      }
 
       this.log('Validity check:', {
         now: now.toISOString(),
         notBefore: cert.notBefore.toISOString(),
         notAfter: cert.notAfter.toISOString(),
-        isValid
+        status
       })
 
       // Extract subject and issuer information
@@ -123,7 +131,7 @@ export class CertificateParser {
         issuer: issuerStr,
         notBefore: cert.notBefore.toLocaleString(),
         notAfter: cert.notAfter.toLocaleString(),
-        isValid: isValid,
+        status: status,
         keySize: keySize,
         keyAlgorithm: keyAlgorithm,
         signatureAlgorithm: cert.signatureAlgorithm.name,
@@ -219,7 +227,7 @@ export class CertificateParser {
       issuer: 'Unknown',
       notBefore: 'Unknown',
       notAfter: 'Unknown',
-      isValid: false,
+      status: 'invalid' as CertificateStatus,
       keySize: 'Unknown',
       keyAlgorithm: 'Unknown',
       signatureAlgorithm: 'Unknown',
