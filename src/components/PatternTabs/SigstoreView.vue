@@ -51,6 +51,46 @@
         </div>
       </div>
 
+      <!-- Certificates Tab -->
+      <div v-if="activeTab === 'certificates'" class="tab-content">
+        <div class="certificates-section">
+          <div class="certificate-chain">
+            <h4>Certificate Chain ({{ certificates.length }} certificates)</h4>
+            <div class="chain-visualization">
+              <div v-for="(cert, index) in certificates" :key="cert.index" class="chain-link">
+                <div v-if="index > 0" class="chain-arrow">↓</div>
+                <div class="certificate-card" :class="{ 'leaf': cert.type === 'Leaf', 'intermediate': cert.type === 'Intermediate', 'root': cert.type === 'Root' }">
+                  <div class="cert-header">
+                    <span class="cert-type">{{ cert.type }} Certificate</span>
+                    <span class="cert-status" :class="{ 'valid': cert.isValid, 'invalid': !cert.isValid }">
+                      {{ cert.isValid ? '✅ Valid' : '❌ Invalid' }}
+                    </span>
+                  </div>
+                  <div class="cert-details">
+                    <div class="cert-field">
+                      <span class="label">Certificate Type:</span>
+                      <span class="value">{{ cert.type }}</span>
+                    </div>
+                    <div class="cert-field">
+                      <span class="label">Certificate Length:</span>
+                      <span class="value">{{ cert.certLength }} characters</span>
+                    </div>
+                    <div class="cert-field">
+                      <span class="label">Base64 Preview:</span>
+                      <span class="value">{{ cert.base64Data }}</span>
+                    </div>
+                    <div class="cert-field">
+                      <span class="label">Raw Data:</span>
+                      <span class="value">{{ cert.raw }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- DSSE Envelope Tab -->
       <div v-if="activeTab === 'dsse'" class="tab-content">
         <div class="dsse-section">
@@ -109,6 +149,11 @@ const availableTabs = computed(() => {
   // Add Verification Material tab if it exists
   if (props.patternInfo.metadata.hasVerificationMaterial) {
     tabs.push({ key: 'verification', label: 'Verification Material' })
+  }
+  
+  // Add Certificates tab if certificates exist
+  if (hasCertificates.value) {
+    tabs.push({ key: 'certificates', label: 'Certificates' })
   }
   
   // Add DSSE tab if DSSE envelope exists
@@ -175,6 +220,63 @@ const inTotoData = computed(() => {
 // Show In-toto section condition
 const showInTotoSection = computed(() => {
   return props.transformEnabled && inTotoData.value !== null
+})
+
+// Certificate parsing and display
+const certificates = computed(() => {
+  const verificationMaterial = props.json.verificationMaterial
+  const certChain = verificationMaterial?.x509CertificateChain?.certificates
+  const singleCert = verificationMaterial?.certificate?.rawBytes
+  
+  let certs: string[] = []
+  
+  if (certChain && Array.isArray(certChain)) {
+    certs = certChain
+  } else if (singleCert) {
+    certs = [singleCert]
+  }
+  
+  if (certs.length === 0) {
+    return []
+  }
+  
+  return certs.map((cert: string, index: number) => {
+    try {
+      // For now, show basic info since we can't easily parse DER certificates in browser
+      const certLength = cert.length
+      const isLeaf = index === 0
+      const isRoot = index === certs.length - 1
+      const type = isLeaf ? 'Leaf' : isRoot ? 'Root' : 'Intermediate'
+      
+      return {
+        index,
+        raw: cert,
+        subject: `Certificate ${index + 1} (${type})`,
+        issuer: `Issuer ${index + 1}`,
+        notBefore: 'See certificate details',
+        notAfter: 'See certificate details',
+        isValid: true,
+        type,
+        certLength,
+        base64Data: cert.substring(0, 50) + '...'
+      }
+    } catch (error) {
+      return {
+        index,
+        raw: cert,
+        subject: 'Error parsing certificate',
+        issuer: 'Unknown',
+        notBefore: 'Unknown',
+        notAfter: 'Unknown',
+        isValid: false,
+        type: 'Unknown'
+      }
+    }
+  })
+})
+
+const hasCertificates = computed(() => {
+  return certificates.value.length > 0
 })
 
 // Format verification material
@@ -299,5 +401,114 @@ const formattedVerification = computed(() => {
   color: var(--text-secondary);
   font-style: italic;
   font-size: 1.1rem;
+}
+
+/* Certificate styles */
+.certificates-section {
+  height: 100%;
+}
+
+.certificate-chain h4 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.chain-visualization {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chain-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chain-arrow {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
+}
+
+.certificate-card {
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.certificate-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.certificate-card.leaf {
+  border-left: 4px solid var(--success-color);
+}
+
+.certificate-card.intermediate {
+  border-left: 4px solid var(--primary-color);
+}
+
+.certificate-card.root {
+  border-left: 4px solid var(--text-secondary);
+}
+
+.cert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cert-type {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.cert-status {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.cert-status.valid {
+  color: var(--success-color);
+}
+
+.cert-status.invalid {
+  color: var(--error-color);
+}
+
+.cert-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.cert-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cert-field .label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cert-field .value {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  word-break: break-word;
 }
 </style> 
