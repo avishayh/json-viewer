@@ -208,7 +208,7 @@ export class CertificateParser {
   /**
    * Create fallback certificate when parsing fails
    */
-  private createFallbackCertificate(certBase64: string, index: number): ParsedCertificate {
+  private createFallbackCertificate(_certBase64: string, index: number): ParsedCertificate {
     this.log('Creating fallback certificate due to parsing failure')
     
     return {
