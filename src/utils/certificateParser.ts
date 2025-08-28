@@ -61,19 +61,21 @@ export class CertificateParser {
 
     try {
       // Convert base64 to buffer - handle both Node.js and browser environments
-      let certBuffer: Uint8Array
+      let certBuffer: ArrayBuffer
       if (typeof Buffer !== 'undefined') {
         // Node.js environment
-        certBuffer = Buffer.from(certBase64, 'base64')
+        const nodeBuffer = Buffer.from(certBase64, 'base64')
+        certBuffer = nodeBuffer.buffer.slice(nodeBuffer.byteOffset, nodeBuffer.byteOffset + nodeBuffer.byteLength)
       } else {
         // Browser environment - use TextEncoder/TextDecoder
         const binaryString = atob(certBase64)
-        certBuffer = new Uint8Array(binaryString.length)
+        const uint8Array = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) {
-          certBuffer[i] = binaryString.charCodeAt(i)
+          uint8Array[i] = binaryString.charCodeAt(i)
         }
+        certBuffer = uint8Array.buffer
       }
-      this.log('Certificate buffer length:', certBuffer.length)
+      this.log('Certificate buffer length:', certBuffer.byteLength)
 
       // Parse certificate using @peculiar/x509
       const cert = new X509Certificate(certBuffer)
